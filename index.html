@@ -1,403 +1,339 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-  <title>ألوان الكناري للصناعات الغذائية HR — نظام المطابقة الشهرية</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- SheetJS (XLSX) CDN لإصلاح XLSX is not defined -->
+  <title>Canary HR – نظام المطابقة الشهرية</title>
+  <meta name="description" content="مطابقة الكود + الاسم ثم مقارنة غ / ر بين ملف البصمة واليدوي مع تلوين وشرح تلقائي.">
+
+  <!-- تحميل مكتبة xlsx قبل أي كود يستخدمها -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
 
   <style>
     :root{
-      --bg:#0b1526;
-      --card:#101e33;
-      --muted:#7fa6ff;
-      --text:#e7eefc;
-      --sub:#c8d6ff;
-      --ok-bg:#0f5132;   --ok-fg:#d1f7df;
-      --bad-bg:#5b1116;  --bad-fg:#ffd6d9;
-      --miss-bg:#3a3f4a; --miss-fg:#e1e4ea;
-      --chip:#1a2b4a; --chip-b:#20355f; --chip-h:#2a447b;
-      --accent:#3a66ff;
-      --accent-2:#244db8;
-      --ring:#2c4786;
-      --border:#1b2b44;
-      --green:#1faa72;
-      --red:#cc3b44;
-      --gray:#8896b2;
+      --bg:#0f172a;          /* أزرق كحلي داكن */
+      --card:#0b1226;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --accent:#1e3a8a;      /* أزرق */
+      --pill:#1d4ed8;        /* أزرق فاتح */
+      --ok:#16a34a;          /* أخضر */
+      --bad:#7f1d1d;         /* خمري */
+      --miss:#6b7280;        /* رمادي */
+      --line:#1f2937;
     }
     *{box-sizing:border-box}
-    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Kufi Arabic",Tahoma}
-    a{color:var(--muted);text-decoration:none}
-    .container{max-width:1100px;margin:auto;padding:20px}
-    header{margin-bottom:18px}
-    .title{font-weight:800;font-size:24px;line-height:1.3}
-    .subtitle{color:var(--sub);font-size:14px;margin-top:6px}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Kufi Arabic",Tahoma,sans-serif}
+    .wrap{max-width:1100px;margin:auto;padding:20px}
+    h1{font-weight:800;margin:8px 0 18px}
+    .muted{color:var(--muted)}
     .grid{display:grid;gap:14px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}
-    .card h3{margin:0 0 10px 0;font-size:18px}
-    .drop{border:2px dashed #456; border-radius:14px; padding:16px; text-align:center; color:#cfe2ff; background:#0e1b31;}
-    .drop:hover{border-color:#69f; background:#11203a}
-    input[type="file"]{display:none}
-    label.file{display:block;cursor:pointer;font-weight:700}
+    @media(min-width:880px){.grid{grid-template-columns:1fr 1fr}}
+    .card{background:linear-gradient(180deg,var(--card),#0a1124);border:1px solid var(--line);border-radius:14px;padding:14px}
+    .drop{border:2px dashed #334155;border-radius:12px;padding:18px;text-align:center;opacity:.95}
+    .drop input{display:none}
+    .drop b{display:inline-flex;align-items:center;gap:8px}
+    .hint{font-size:.85rem;color:var(--muted)}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .field{flex:1;min-width:180px}
-    .search{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--ring);background:#0e1b2c;color:var(--text);outline:none}
-    .chips{display:flex;gap:10px;flex-wrap:wrap}
-    .chip{background:var(--chip);border:1px solid var(--chip-b);padding:8px 12px;border-radius:999px;color:#cfe2ff;cursor:pointer}
-    .chip:active,.chip:hover{background:var(--chip-h)}
-    .chip.ok{background:rgba(15,81,50,.18);border-color:#1e6b4b}
-    .chip.bad{background:rgba(91,17,22,.18);border-color:#8f1c24}
-    .chip.miss{background:rgba(58,63,74,.25);border-color:#4b5160}
-    .btn{background:var(--accent);border:1px solid var(--ring);color:white;padding:10px 14px;border-radius:12px;font-weight:700;cursor:pointer}
-    .btn:hover{background:var(--accent-2)}
-    .btn.ghost{background:#122038}
-    .muted{color:#adc0ff}
-    .kpis{display:flex;gap:10px;flex-wrap:wrap}
-    .kpi{flex:1;min-width:150px;background:#0e1b31;border:1px solid var(--border);border-radius:14px;padding:12px}
-    .kpi h4{margin:0 0 6px 0;font-size:14px;color:#cfe2ff}
-    .kpi .n{font-weight:900;font-size:20px}
-    .table-wrap{overflow:auto;border-radius:14px;border:1px solid var(--border)}
-    table{width:100%;border-collapse:collapse;table-layout:fixed;background:#0e1b31}
-    colgroup col.seq{width:56px}
-    colgroup col.code{width:100px}
-    colgroup col.name{width:auto}
-    th{position:sticky;top:0;background:#0b182e;color:#cfe2ff}
-    th,td{padding:10px 8px;border-bottom:1px solid var(--border)}
-    td.c, th.c{text-align:center;white-space:nowrap}
-    td.name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .badge{padding:4px 10px;border-radius:999px;font-weight:700;display:inline-block}
-    .badge.ok{background:var(--ok-bg);color:var(--ok-fg)}
-    .badge.bad{background:var(--bad-bg);color:var(--bad-fg)}
-    .badge.miss{background:var(--miss-bg);color:var(--miss-fg)}
-    tr.row-match{background:rgba(16,94,60,.10)}
-    tr.row-diff{background:rgba(139,0,0,.08)}
-    tr.row-missing{background:rgba(100,100,100,.06)}
-    footer{margin:22px 0 8px;color:#aab7d6;font-size:12px;text-align:center}
-    footer .sep{opacity:.5;margin:0 6px}
-    @media (max-width:420px){
-      .title{font-size:20px}
-      table{font-size:14px}
-      td.name{max-width:220px}
-    }
+    .pill{padding:8px 14px;border-radius:999px;font-weight:700}
+    .pill.ok{background:var(--ok)}
+    .pill.bad{background:var(--bad)}
+    .pill.miss{background:var(--miss)}
+    .pill.info{background:var(--pill)}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+    .btn{background:#111827;border:1px solid #374151;color:#e5e7eb;border-radius:999px;padding:8px 14px;cursor:pointer}
+    .btn.active{background:var(--accent)}
+    table{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
+    thead th{background:#0b1735;color:#cbd5e1;padding:10px;border-bottom:1px solid #27324b;white-space:nowrap}
+    tbody td{padding:10px;border-bottom:1px solid #1f2937;vertical-align:middle}
+    tbody tr.ok{background:rgba(22,163,74,.12)}
+    tbody tr.bad{background:rgba(127,29,29,.12)}
+    tbody tr.miss{background:rgba(107,114,128,.12)}
+    .name{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .num{text-align:center}
+    .foot{margin:18px 0 8px;color:var(--muted);font-size:.9rem;border-top:1px solid #1f2937;padding-top:10px}
+    .search{width:100%;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1226;color:#e5e7eb}
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="title">ألوان الكناري للصناعات الغذائية <span style="color:#9fc1ff">HR</span> — <span style="font-weight:900">نظام المطابقة الشهرية</span></div>
-      <div class="subtitle">مطابقة: <b>الكود + الاسم</b> ثم مقارنة <b>غ / ر</b> بين ملف البصمة واليدوي، مع تلوين وشرح تلقائي.</div>
-    </header>
+  <div class="wrap">
+    <h1>ألوان الكناري للصناعات الغذائية — <span style="color:#60a5fa">HR</span></h1>
+    <div class="muted">مطابقة: الكود + <b>الاسم</b> ثم مقارنة <b>غ / ر</b> بين ملف البصمة واليدوي، مع تلوين وشرح تلقائي.</div>
 
-    <!-- منطقة الرفع -->
-    <div class="grid">
+    <div class="grid" style="margin-top:16px">
+      <!-- ملف البصمة -->
       <div class="card">
         <h3>📁 ملف البصمة (شهري)</h3>
-        <label class="drop" for="biometric">
-          <label class="file" for="biometric">📂 اسحب الملف هنا أو اضغط للاختيار</label>
-          <div class="muted" id="bio-status">لم يتم اختيار ملف.</div>
+        <label class="drop" id="bioDrop">
+          <input id="bioFile" type="file" accept=".xlsx,.xls,.csv" />
+          <b>اسحب الملف هنا أو اضغط للاختيار</b>
+          <div class="hint" id="bioHint">لم يتم اختيار ملف.</div>
         </label>
-        <input id="biometric" type="file" accept=".xlsx,.xls,.csv" />
       </div>
 
+      <!-- الملف اليدوي -->
       <div class="card">
         <h3>📝 الكشف اليدوي (شهري)</h3>
-        <label class="drop" for="manual">
-          <label class="file" for="manual">📂 اسحب الملف هنا أو اضغط للاختيار</label>
-          <div class="muted" id="man-status">لم يتم اختيار ملف.</div>
+        <label class="drop" id="manDrop">
+          <input id="manFile" type="file" accept=".xlsx,.xls,.csv" />
+          <b>اسحب الملف هنا أو اضغط للاختيار</b>
+          <div class="hint" id="manHint">لم يتم اختيار ملف.</div>
         </label>
-        <input id="manual" type="file" accept=".xlsx,.xls,.csv" />
       </div>
     </div>
 
-    <!-- أدوات -->
-    <div class="grid" style="margin-top:12px">
-      <div class="card">
-        <div class="row">
-          <div class="field">
-            <input id="q" class="search" placeholder="بحث بالاسم أو الكود..." />
-          </div>
-          <div class="chips">
-            <button id="btn-all" class="chip">الكل</button>
-            <button id="btn-match" class="chip ok">مطابق</button>
-            <button id="btn-diff" class="chip bad">مخالف</button>
-            <button id="btn-missing" class="chip miss">ناقص</button>
-          </div>
-          <div style="flex:1"></div>
-          <button id="btn-export" class="btn">💾 تنزيل النتائج XLSX</button>
-        </div>
-      </div>
-
-      <!-- مؤشرات -->
-      <div class="kpis">
-        <div class="kpi"><h4>تم تحميل:</h4><div class="n"><span id="loaded">0</span> / <span id="total">0</span></div></div>
-        <div class="kpi"><h4>مطابق</h4><div class="n" style="color:#73e0a5" id="count-match">0</div></div>
-        <div class="kpi"><h4>مخالف</h4><div class="n" style="color:#ff9aa4" id="count-diff">0</div></div>
-        <div class="kpi"><h4>ناقص</h4><div class="n" style="color:#cfd5de" id="count-missing">0</div></div>
-      </div>
-
-      <!-- الجدول -->
-      <div class="table-wrap">
-        <table>
-          <colgroup>
-            <col class="seq"><col class="code"><col class="name"><col span="4"><col>
-          </colgroup>
-          <thead>
-            <tr>
-              <th class="c">م</th>
-              <th class="c">(بصمة) الكود</th>
-              <th class="c">(بصمة) الاسم</th>
-              <th class="c">(بصمة) غ</th>
-              <th class="c">(بصمة) ر</th>
-              <th class="c">(يدوي) غ</th>
-              <th class="c">(يدوي) ر</th>
-              <th class="c">النتيجة</th>
-            </tr>
-          </thead>
-          <tbody id="result-body">
-            <tr><td colspan="8" class="c" style="color:#9fb6e6">نتائج المطابقة ستظهر هنا…</td></tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="row" style="margin-top:14px">
+      <span class="pill ok">مطابق <span id="okCount">0</span></span>
+      <span class="pill bad">مخالف <span id="badCount">0</span></span>
+      <span class="pill miss">ناقص <span id="missCount">0</span></span>
+      <span class="pill info">تم تحميل: <span id="loadCount">0</span> / <span id="totalCount">0</span></span>
     </div>
 
-    <footer>
-      © ألوان الكناري للصناعات الغذائية — يعمل محليًا داخل المتصفح<span class="sep">·</span>
-      نظام المطابقة الشهري الذكي للموارد البشرية<span class="sep">·</span>
-      إعداد المهندس/ حمدي العريقي — ت: 773143600<span class="sep">·</span>
-      جميع الحقوق محفوظة — نوفمبر © 2025
-    </footer>
+    <input id="q" class="search" placeholder="...بحث بالاسم أو الكود">
+
+    <div class="toolbar">
+      <button class="btn active" data-filter="all">الكل</button>
+      <button class="btn" data-filter="ok">مطابق</button>
+      <button class="btn" data-filter="bad">مخالف</button>
+      <button class="btn" data-filter="miss">ناقص</button>
+      <button class="btn" id="dl">تنزيل النتائج XLSX 💾</button>
+    </div>
+
+    <div class="card">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th class="num">م</th>
+            <th class="num">(بصمة) الكود</th>
+            <th>(بصمة) الاسم</th>
+            <th class="num">(بصمة) غ</th>
+            <th class="num">(بصمة) ر</th>
+            <th class="num">(يدوي) الكود</th>
+            <th>(يدوي) الاسم</th>
+            <th class="num">(يدوي) غ</th>
+            <th class="num">(يدوي) ر</th>
+            <th>نتيجة ر</th>
+            <th>نتيجة غ</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="foot">
+        © ألوان الكناري للصناعات الغذائية — يعمل محليًا داخل المتصفح. |
+        نظام المطابقة الشهري الذكي للموارد البشرية |
+        إعداد المهندس/ حمدي العريقي — ت: 773143600 — جميع الحقوق محفوظة — نوفمبر © 2025
+      </div>
+    </div>
   </div>
 
   <script>
-    // ================== بيانات داخلية ==================
-    let bioRows = [];     // من ملف البصمة
-    let manRows = [];     // من الملف اليدوي
-    let rowsFinal = [];   // الناتج الموحّد
-    let filterMode = 'all';
-    let searchQuery = '';
+    // تأكد أن المكتبة محمّلة
+    if (!window.XLSX) {
+      alert("تعذّر تحميل مكتبة XLSX من الإنترنت. رجاءً تحقّق من الاتصال ثم أعد التحميل.");
+    }
 
-    // ================== أدوات مساعدة ==================
-    const $ = sel => document.querySelector(sel);
-    function setText(sel, v){ const el=$(sel); if(el) el.textContent=v; }
-    const deb = (fn,ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms);} };
+    // عناصر DOM
+    const bioFile = document.getElementById('bioFile');
+    const manFile = document.getElementById('manFile');
+    const bioHint = document.getElementById('bioHint');
+    const manHint = document.getElementById('manHint');
+    const q = document.getElementById('q');
+    const tbody = document.querySelector('#tbl tbody');
+    const counts = { ok:0, bad:0, miss:0, total:0, loaded:0 };
+    const okC = document.getElementById('okCount');
+    const badC = document.getElementById('badCount');
+    const missC = document.getElementById('missCount');
+    const loadC = document.getElementById('loadCount');
+    const totalC = document.getElementById('totalCount');
+    const btns = document.querySelectorAll('.btn[data-filter]');
+    const dlBtn = document.getElementById('dl');
 
-    // تحويل رقم آمن
-    const toNum = v => v === undefined || v === null || v === '' ? null : (isNaN(+v) ? null : +v);
+    let bio = [];   // [{code,name,g,r}]
+    let man = [];
+    let merged = []; // النتائج
 
-    // قراءة ورقة (تحديد صف العناوين ديناميكيًا)
-    async function parseSheet(file){
+    // قراءة ملف Excel عامّة
+    async function readExcel(file){
       return new Promise((resolve, reject)=>{
         const reader = new FileReader();
-        reader.onload = () => {
+        reader.onload = e=>{
           try{
-            const data = new Uint8Array(reader.result);
-            const wb = XLSX.read(data, {type:'array', cellDates:false, codepage:65001});
-            const sheet = wb.Sheets[wb.SheetNames[0]];
-            const aoa = XLSX.utils.sheet_to_json(sheet, {header:1, raw:true});
-            // ابحث عن صف يحتوي هذه الأعمدة
-            const want = ['الكود','الاسم','غ','ر'];
-            let headIdx = -1;
-            for(let i=0;i<Math.min(30, aoa.length);i++){
-              const row = aoa[i].map(x=> (x||'').toString().trim());
-              const ok = want.every(w=> row.includes(w));
-              if(ok){ headIdx = i; break; }
-            }
-            if(headIdx===-1) throw new Error('تعذر تحديد صف العناوين. تأكد من وجود: الكود | الاسم | غ | ر');
-            const headers = aoa[headIdx];
-            const idxCode = headers.findIndex(h=> String(h).trim()==='الكود');
-            const idxName = headers.findIndex(h=> String(h).trim()==='الاسم');
-            const idxF    = headers.findIndex(h=> String(h).trim()==='غ');
-            const idxA    = headers.findIndex(h=> String(h).trim()==='ر');
-            const out=[];
-            for(let r=headIdx+1;r<aoa.length;r++){
-              const row=aoa[r]||[];
-              const code = toNum(row[idxCode]);
-              const name = row[idxName]!==undefined ? String(row[idxName]).toString().trim() : '';
-              const f = toNum(row[idxF]);
-              const a = toNum(row[idxA]);
-              if(code || name){ out.push({code, name, f, a}); }
-            }
-            resolve(out);
-          }catch(e){ reject(e); }
+            const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
+            resolve(rows);
+          }catch(err){ reject(err); }
         };
-        reader.onerror = () => reject(reader.error);
+        reader.onerror = reject;
         reader.readAsArrayBuffer(file);
       });
     }
 
-    // دمج واحتساب الحالة
-    function buildFinal(){
-      const mapBio = new Map();
-      for(const r of bioRows){ if(r.code!=null) mapBio.set(r.code, r); }
-      const mapMan = new Map();
-      for(const r of manRows){ if(r.code!=null) mapMan.set(r.code, r); }
-
-      const allCodes = new Set([...mapBio.keys(), ...mapMan.keys()]);
-      const res=[];
-      for(const code of allCodes){
-        const b = mapBio.get(code);
-        const m = mapMan.get(code);
-        const name = (b?.name || m?.name || '').toString().trim();
-        const f_b = b?.f ?? null;
-        const a_b = b?.a ?? null;
-        const f_m = m?.f ?? null;
-        const a_m = m?.a ?? null;
-
-        let status = 'match';
-        if(f_b==null || a_b==null || f_m==null || a_m==null){
-          status = 'missing';
-        }else{
-          const sameF = (f_b === f_m);
-          const sameA = (a_b === a_m);
-          status = (sameF && sameA) ? 'match' : 'diff';
+    // تطبيع أسماء الأعمدة العربية المحتملة
+    function normalizeRow(row){
+      const get = (...keys)=> {
+        for(const k of keys){
+          if (k in row) return String(row[k]).trim();
         }
-        res.push({code, name, f_b, a_b, f_m, a_m, status});
+        // محاولة مطابقة جزئية
+        const low = Object.fromEntries(Object.entries(row).map(([k,v])=>[k.replace(/\s+/g,''), v]));
+        for(const k of keys){
+          const kk = k.replace(/\s+/g,'');
+          if (kk in low) return String(low[kk]).trim();
+        }
+        return "";
+      };
+
+      // مفاتيح شائعة
+      const code = get("الكود","الكود (بصمة)","كود","code","CODE");
+      const name = get("الاسم","الاسم (بصمة)","اسم","name","NAME");
+      const g = Number(get("غ","غ (بصمة)","غياب","G")) || 0;
+      const r = Number(get("ر","ر (بصمة)","تأخير","R")) || 0;
+
+      return { code: String(code).replace(/[^\d]/g,''), name, g, r };
+    }
+
+    function toDict(arr){
+      const d = {};
+      for(const r of arr){
+        if(!r.code) continue;
+        // إن تعدد الكود نأخذ أول واحد
+        if(!(r.code in d)) d[r.code] = r;
       }
-      // فرز مبدئي
-      res.sort((a,b)=> (a.code||0) - (b.code||0));
-      rowsFinal = res;
+      return d;
     }
 
-    // عدّادات
-    function updateCounters(view){
-      const total   = view.length;
-      const match   = view.filter(r=>r.status==='match').length;
-      const diff    = view.filter(r=>r.status==='diff').length;
-      const missing = view.filter(r=>r.status==='missing').length;
-      setText('#count-match', match);
-      setText('#count-diff', diff);
-      setText('#count-missing', missing);
-      setText('#loaded', (bioRows.length && manRows.length) ? rowsFinal.length : 0);
-      setText('#total', rowsFinal.length || 0);
-    }
+    function merge(){
+      const b = toDict(bio);
+      const m = toDict(man);
+      const codes = Array.from(new Set([...Object.keys(b), ...Object.keys(m)]))
+        .filter(Boolean)
+        .sort((a,b)=> Number(a)-Number(b));
 
-    // رENDER
-    function statusClass(st){ return st==='match'?'ok':st==='diff'?'bad':'miss'; }
-    function statusLabel(st){ return st==='match'?'مطابق':st==='diff'?'مخالف':'بيانات ناقصة'; }
-
-    function renderTable(){
-      // فلترة حسب الأزرار
-      let view = rowsFinal.filter(r=>{
-        if(filterMode==='match') return r.status==='match';
-        if(filterMode==='diff') return r.status==='diff';
-        if(filterMode==='missing') return r.status==='missing';
-        return true;
+      merged = codes.map((code, idx)=>{
+        const B = b[code] || {code,name:"",g:"",r:""};
+        const M = m[code] || {code,name:"",g:"",r:""};
+        // الحكم
+        let tag="ok";
+        if(!B.name || !M.name){ tag="miss"; }
+        else if (String(B.name).trim() !== String(M.name).trim() || Number(B.g)!=Number(M.g) || Number(B.r)!=Number(M.r)){
+          tag="bad";
+        }
+        return {
+          idx: idx+1,
+          code_b: B.code||"",
+          name_b: B.name||"",
+          g_b: B.g===""? "": Number(B.g),
+          r_b: B.r===""? "": Number(B.r),
+          code_m: M.code||"",
+          name_m: M.name||"",
+          g_m: M.g===""? "": Number(M.g),
+          r_m: M.r===""? "": Number(M.r),
+          tag
+        };
       });
 
-      // فلترة البحث
-      const q = searchQuery.trim();
-      if(q){
-        const qn = Number(q);
-        view = view.filter(r=>{
-          if(!isNaN(qn)) return (r.code===qn);
-          return (r.name||'').includes(q);
-        });
-      }
+      counts.ok = merged.filter(x=>x.tag==="ok").length;
+      counts.bad = merged.filter(x=>x.tag==="bad").length;
+      counts.miss = merged.filter(x=>x.tag==="miss").length;
+      counts.total = merged.length;
+      counts.loaded = Math.max(bio.length, man.length);
 
-      // فرز وضبط الرقم المتسلسل
-      view.sort((a,b)=> (a.code||0)-(b.code||0));
-      view.forEach((r,i)=> r.seq=i+1);
+      okC.textContent = counts.ok;
+      badC.textContent = counts.bad;
+      missC.textContent = counts.miss;
+      loadC.textContent = counts.loaded;
+      totalC.textContent = counts.total;
 
-      const tbody = $('#result-body');
-      tbody.innerHTML = '';
-      if(view.length===0){
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td colspan="8" class="c" style="color:#9fb6e6">لا توجد نتائج مطابقة لخيارات العرض الحالية.</td>`;
+      render();
+    }
+
+    function render(){
+      const fActive = document.querySelector('.btn.active')?.dataset.filter || "all";
+      const query = q.value.trim();
+      const re = query? new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')): null;
+
+      tbody.innerHTML = "";
+      let i=1;
+      for(const row of merged){
+        if(fActive!=="all" && row.tag!==fActive) continue;
+        if(re){
+          const hay = `${row.code_b} ${row.name_b} ${row.code_m} ${row.name_m}`;
+          if(!re.test(hay)) continue;
+        }
+        const tr = document.createElement('tr');
+        tr.className = row.tag;
+        tr.innerHTML = `
+          <td class="num">${i++}</td>
+          <td class="num">${row.code_b||""}</td>
+          <td class="name" title="${row.name_b||""}">${row.name_b||""}</td>
+          <td class="num">${row.g_b===""?"":row.g_b}</td>
+          <td class="num">${row.r_b===""?"":row.r_b}</td>
+          <td class="num">${row.code_m||""}</td>
+          <td class="name" title="${row.name_m||""}">${row.name_m||""}</td>
+          <td class="num">${row.g_m===""?"":row.g_m}</td>
+          <td class="num">${row.r_m===""?"":row.r_m}</td>
+          <td>${(row.r_b===row.r_m)?"مطابق ر":"مخالف ر"}</td>
+          <td>${(row.g_b===row.g_m)?"مطابق غ":"مخالف غ"}</td>
+        `;
         tbody.appendChild(tr);
-      }else{
-        for(const r of view){
-          const tr=document.createElement('tr');
-          tr.className = r.status==='match'?'row-match':r.status==='diff'?'row-diff':'row-missing';
-          tr.innerHTML = `
-            <td class="c">${r.seq}</td>
-            <td class="c">${r.code ?? ''}</td>
-            <td class="name">${r.name ?? ''}</td>
-            <td class="c">${r.f_b ?? ''}</td>
-            <td class="c">${r.a_b ?? ''}</td>
-            <td class="c">${r.f_m ?? ''}</td>
-            <td class="c">${r.a_m ?? ''}</td>
-            <td class="c"><span class="badge ${statusClass(r.status)}">${statusLabel(r.status)}</span></td>
-          `;
-          tbody.appendChild(tr);
-        }
       }
-      updateCounters(view);
     }
 
-    // تصدير
-    function exportXLSX(){
-      if(!rowsFinal.length){ alert('لا توجد بيانات لتصديرها.'); return; }
-      // بني عرضًا موافقًا للحالة الحالية (نفس renderTable)
-      let view = rowsFinal.filter(r=>{
-        if(filterMode==='match') return r.status==='match';
-        if(filterMode==='diff') return r.status==='diff';
-        if(filterMode==='missing') return r.status==='missing';
-        return true;
+    // تنزيل النتائج
+    dlBtn.addEventListener('click', ()=>{
+      const rows = [["م","(بصمة) الكود","(بصمة) الاسم","(بصمة) غ","(بصمة) ر","(يدوي) الكود","(يدوي) الاسم","(يدوي) غ","(يدوي) ر","نتيجة ر","نتيجة غ","التصنيف"]];
+      merged.forEach((r,idx)=>{
+        rows.push([idx+1,r.code_b,r.name_b,r.g_b,r.r_b,r.code_m,r.name_m,r.g_m,r.r_m,(r.r_b===r.r_m)?"مطابق ر":"مخالف ر",(r.g_b===r.g_m)?"مطابق غ":"مخالف غ", r.tag]);
       });
-      const q=searchQuery.trim();
-      if(q){
-        const qn=Number(q);
-        view = view.filter(r=> isNaN(qn) ? (r.name||'').includes(q) : (r.code===qn));
-      }
-      view.sort((a,b)=> (a.code||0)-(b.code||0));
-      view.forEach((r,i)=> r.seq=i+1);
-
-      const data = view.map(r=>({
-        "م": r.seq,
-        "الكود (بصمة)": r.code ?? "",
-        "الاسم (بصمة)": r.name ?? "",
-        "غ (بصمة)": r.f_b ?? "",
-        "ر (بصمة)": r.a_b ?? "",
-        "غ (يدوي)": r.f_m ?? "",
-        "ر (يدوي)": r.a_m ?? "",
-        "النتيجة": statusLabel(r.status)
-      }));
-      const ws = XLSX.utils.json_to_sheet(data);
+      const ws = XLSX.utils.aoa_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "نتائج المطابقة");
       XLSX.writeFile(wb, "canary_monthly_compare.xlsx");
-    }
+    });
 
-    // ================== الأحداث ==================
-    $('#biometric').addEventListener('change', async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      $('#bio-status').textContent = `تم اختيار: ${file.name}`;
+    // فلاتر الأزرار
+    btns.forEach(b=>{
+      b.addEventListener('click', ()=>{
+        btns.forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        render();
+      });
+    });
+    q.addEventListener('input', render);
+
+    // ربط القرّاء
+    bioFile.addEventListener('change', async e=>{
+      const f = e.target.files?.[0];
+      if(!f) return;
+      bioHint.textContent = "جارِ القراءة...";
       try{
-        bioRows = await parseSheet(file);
+        const rows = await readExcel(f);
+        bio = rows.map(normalizeRow).filter(x=>x.code || x.name);
+        bioHint.textContent = `تم اختيار: ${f.name} — ${bio.length} صف`;
+        merge();
       }catch(err){
         alert("تعذّر قراءة ملف البصمة.\n" + err.message);
-        bioRows = [];
+        bioHint.textContent = "فشل التحميل.";
       }
-      buildFinal(); renderTable();
     });
 
-    $('#manual').addEventListener('change', async (e)=>{
-      const file = e.target.files[0];
-      if(!file) return;
-      $('#man-status').textContent = `تم اختيار: ${file.name}`;
+    manFile.addEventListener('change', async e=>{
+      const f = e.target.files?.[0];
+      if(!f) return;
+      manHint.textContent = "جارِ القراءة...";
       try{
-        manRows = await parseSheet(file);
+        const rows = await readExcel(f);
+        man = rows.map(normalizeRow).filter(x=>x.code || x.name);
+        manHint.textContent = `تم اختيار: ${f.name} — ${man.length} صف`;
+        merge();
       }catch(err){
         alert("تعذّر قراءة الملف اليدوي.\n" + err.message);
-        manRows = [];
+        manHint.textContent = "فشل التحميل.";
       }
-      buildFinal(); renderTable();
     });
-
-    $('#btn-all').onclick      = ()=>{ filterMode='all';     renderTable(); };
-    $('#btn-match').onclick    = ()=>{ filterMode='match';   renderTable(); };
-    $('#btn-diff').onclick     = ()=>{ filterMode='diff';    renderTable(); };
-    $('#btn-missing').onclick  = ()=>{ filterMode='missing'; renderTable(); };
-    $('#btn-export').onclick   = exportXLSX;
-
-    $('#q').addEventListener('input', deb((e)=>{ searchQuery = e.target.value; renderTable(); }, 200));
-
-    // نصائح سريعة للأندرويد: اسحب الملف من مدير الملفات إن أمكن
-    // أو اضغط على مربع الرفع لاختياره.
   </script>
 </body>
 </html>
