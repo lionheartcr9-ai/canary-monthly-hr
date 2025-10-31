@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Canary HR — نظام المطابقة الشهرية</title>
+
+  <!-- SheetJS with styles (client-side Excel read/write + colors) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="hero">
+    <h1>ألوان الكناري للصناعات الغذائية — <span class="brand">HR</span> نظام المطابقة الشهرية</h1>
+    <p class="subtitle">مطابقة: <strong>الكود + الاسم</strong> ثم مقارنة <b>غ</b> / <b>ر</b> بين ملف البصمة واليدوي، مع تلوين وشرح تلقائي.</p>
+  </header>
+
+  <main class="container">
+    <section class="controls">
+      <div class="control">
+        <label>فرق Smart Insights (يوم):</label>
+        <input id="insightDiff" type="number" min="1" value="2">
+      </div>
+      <div class="control">
+        <label>🔎 بحث بالاسم أو الكود...</label>
+        <input id="searchBox" type="text" placeholder="ابحث بالاسم أو الكود..." />
+      </div>
+      <button id="btnExport" class="btn export" disabled>💾 تنزيل النتائج XLSX</button>
+    </section>
+
+    <section class="cards">
+      <div class="card">
+        <h3>📄 ملف البصمة (شهري)</h3>
+        <div class="drop" id="dropBio">
+          <input type="file" id="fileBio" accept=".xlsx,.xls,.csv" />
+          <span>📂 اسحب الملف هنا أو اضغط للاختيار</span>
+        </div>
+        <small id="statBio" class="hint">لم يتم اختيار ملف.</small>
+      </div>
+
+      <div class="card">
+        <h3>📝 الكشف اليدوي (شهري)</h3>
+        <div class="drop" id="dropMan">
+          <input type="file" id="fileMan" accept=".xlsx,.xls,.csv" />
+          <span>📂 اسحب الملف هنا أو اضغط للاختيار</span>
+        </div>
+        <small id="statMan" class="hint">لم يتم اختيار ملف.</small>
+      </div>
+    </section>
+
+    <section class="badges">
+      <div class="badge ok" id="countOk">مطابق 0</div>
+      <div class="badge bad" id="countBad">مخالف 0</div>
+      <div class="badge miss" id="countMiss">ناقص 0</div>
+      <div class="badge load" id="countLoad">تم تحميل: 0 / 0 👥</div>
+    </section>
+
+    <section class="tablewrap">
+      <table id="resultTable">
+        <thead>
+          <tr>
+            <th>م</th>
+            <th>الكود (بصمة)</th>
+            <th>الاسم (بصمة)</th>
+            <th>غ (بصمة)</th>
+            <th>ر (بصمة)</th>
+            <th>الكود (يدوي)</th>
+            <th>الاسم (يدوي)</th>
+            <th>غ (يدوي)</th>
+            <th>ر (يدوي)</th>
+            <th>نتيجة غ</th>
+            <th>نتيجة ر</th>
+            <th>الملاحظة</th>
+          </tr>
+        </thead>
+        <tbody><tr><td colspan="12" style="text-align:center;color:#8899aa">نتائج المطابقة ستظهر هنا…</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div>© ألوان الكناري للصناعات الغذائية — يعمل محليًا داخل المتصفح.</div>
+    <div>نظام المطابقة الشهري الذكي للموارد البشرية</div>
+    <div>إعداد المهندس/ حمدي العريقي — ت: 773143600 — جميع الحقوق محفوظة — نوفمبر © 2025</div>
+  </footer>
+
+  <dialog id="dlg">
+    <h3>تعذّر هذه الصفحة</h3>
+    <p id="dlgMsg">حدث خطأ غير متوقع.</p>
+    <button onclick="document.getElementById('dlg').close()">حسنًا</button>
+  </dialog>
+
+  <script src="./script.js"></script>
+</body>
+</html>
