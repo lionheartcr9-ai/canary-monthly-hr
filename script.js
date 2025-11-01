@@ -1,4 +1,4 @@
-/* ============ أدوات مساعدة ============ */
+/* ===================== أدوات مساعدة ===================== */
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
@@ -7,234 +7,266 @@ const manFile = $('#manFile');
 const bioHint = $('#bioHint');
 const manHint = $('#manHint');
 const tbody = $('#tbody');
-const q = $('#q');
+const rowsCnt = $('#rowsCnt');
+const okCnt = $('#okCnt'), badCnt = $('#badCnt'), missCnt = $('#missCnt'), totalCnt = $('#totalCnt');
 const dlBtn = $('#dlBtn');
-
-const pills = $$('.pill');
-const nTotal = $('#nTotal');
-const nOk = $('#nOk');
-const nBad = $('#nBad');
-const nMiss = $('#nMiss');
+const q = $('#q');
 
 let bio = [];   // [{code,name,g,r}]
-let man = [];
-let merged = []; // صفوف العرض + التصدير
-let activeFilter = 'all';
-let query = '';
+let man = [];   // [{code,name,g,r}]
+let merged = []; // صفوف العرض النهائي
+let currentFilter = 'all';
 
-/* قراءة أي من XLSX/CSV */
-async function readExcel(file){
-  const ab = await file.arrayBuffer();
-  const wb = XLSX.read(ab, {type:'array', cellDates:true});
-  const sh = wb.Sheets[wb.SheetNames[0]];
-  let rows = XLSX.utils.sheet_to_json(sh, {header:1, defval:'', raw:true});
+/* تطبيع النص العربي لتقليل فروق الهجاء */
+function normalizeName(s=''){
+  return String(s)
+    .replace(/\s+/g,' ')
+    .replace(/[إأآا]/g,'ا')
+    .replace(/ى/g,'ي')
+    .replace(/ؤ/g,'و')
+    .replace(/ئ/g,'ي')
+    .replace(/ة/g,'ه')
+    .trim();
+}
+function n2(x){ return isFinite(+x) ? +x : 0 }
 
-  // ابحث عن الأعمدة (كود/اسم/غ/ر) بشكل مرن
-  // يدعم الترتيب الشائع لديك (B=الكود, C=الاسم, D=غ, E=ر) وغير ذلك
-  const header = rows[0].map(x=>String(x).trim());
-  // جرّب أكثر من احتمال
-  const idx = {
-    code: header.findIndex(h => /كود|الكو?د|code/i.test(h)) !== -1 ? header.findIndex(h => /كود|الكو?د|code/i.test(h)) : 0,
-    name: header.findIndex(h => /الاسم|name/i.test(h)) !== -1 ? header.findIndex(h => /الاسم|name/i.test(h)) : 1,
-    g   : header.findIndex(h => /^غ|غياب|غيابات|g$/i.test(h)) !== -1 ? header.findIndex(h => /^غ|غياب|غيابات|g$/i.test(h)) : 2,
-    r   : header.findIndex(h => /^ر|راتب|r$/i.test(h)) !== -1 ? header.findIndex(h => /^ر|راتب|r$/i.test(h)) : 3,
-  };
+/* قراءة CSV بسيطة */
+async function readCSV(file){
+  const text = await file.text();
+  const lines = text.replace(/\r/g,'').split('\n').filter(Boolean);
+  const rows = [];
+  for (const ln of lines){
+    const parts = ln.split(',').map(c=>c.trim());
+    rows.push(parts);
+  }
+  return rows;
+}
 
-  // إن كانت الصفوف بدون عناوين (كما في ملفاتك) نتجاهل الصف الأول ونقرأ أعمدة B..E
-  const start = /كود|الاسم|غ|ر|code|name|g|r/i.test(header.join('')) ? 1 : 0;
+/* قراءة أي ملف (XLSX أو CSV) وإرجاع صفوف مصفوفة */
+async function readAny(file){
+  const ext = (file.name.split('.').pop()||'').toLowerCase();
+  if (ext === 'csv'){
+    return await readCSV(file);
+  }
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, {cellDates:false, cellText:false});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+}
 
-  const out = [];
-  rows.slice(start).forEach(row=>{
-    const code = String(row[idx.code] ?? '').toString().trim();
-    const name = String(row[idx.name] ?? '').toString().trim();
-    const g = Number(row[idx.g] ?? 0) || 0;
-    const r = Number(row[idx.r] ?? 0) || 0;
-    if (!code && !name) return;
-    out.push({ code, name, g, r });
-  });
+/* محاولات لاكتشاف الأعمدة */
+function toObjects(rows){
+  if (!rows.length) return [];
+  // ابحث عن أول أربعة أعمدة (كود/اسم/غ/ر) إن وُجدت رؤوس
+  const head = rows[0].map(x=>String(x).trim());
+  const findIdx = (cands)=> head.findIndex(h => cands.some(c=>h.includes(c)));
+  let iCode = findIdx(['الكود','الكود (بصمة)','الكود (يدوي)','code']);
+  let iName = findIdx(['الاسم','الاسم (بصمة)','الاسم (يدوي)','name']);
+  let iG = findIdx(['غ','غياب','G']);
+  let iR = findIdx(['ر','راحة','R']);
+
+  // إن لم نجد رؤوس، نفترض الترتيب: كود, اسم, غ, ر
+  const startRow = (iCode>-1||iName>-1||iG>-1||iR>-1) ? 1 : 0;
+  if (startRow===0){ iCode=0; iName=1; iG=2; iR=3; }
+
+  const out=[];
+  for (let r=startRow;r<rows.length;r++){
+    const row = rows[r]||[];
+    const code = String(row[iCode] ?? '').trim();
+    const name = String(row[iName] ?? '').trim();
+    const g = n2(row[iG]);
+    const rr = n2(row[iR]);
+    if (!code && !name && !g && !rr) continue;
+    out.push({code, name, g, r: rr});
+  }
   return out;
 }
 
-/* تطبيع الاسم والكود */
-function normalizeRow(x){
-  return {
-    code: String(x.code ?? '').replace(/[^\d]/g,'').trim(),
-    name: String(x.name ?? '').replace(/\s+/g,' ').trim(),
-    g: Number(x.g ?? 0) || 0,
-    r: Number(x.r ?? 0) || 0,
-  };
-}
+/* دمج ومقارنة وفق القواعد المطلوبة */
+function mergeCompare(){
+  const mapBio = new Map();
+  for (const b of bio){
+    const key = `${b.code}|${normalizeName(b.name)}`;
+    mapBio.set(key, b);
+  }
 
-/* دمج ومقارنة */
-function buildMerged(){
-  const mapMan = new Map(man.map(m => [m.code, m]));
-  const codes = new Set([...bio.map(b=>b.code), ...man.map(m=>m.code)]);
+  const keys = new Set();
+  const out = [];
 
-  merged = [];
-  for (const code of codes){
-    const b = bio.find(x=>x.code===code) || null;
-    const m = mapMan.get(code) || null;
+  // مر عبر اليدوي أولاً (نضمن وجود صف لكل موظف موجود يدوياً)
+  for (const m of man){
+    const key = `${m.code}|${normalizeName(m.name)}`;
+    keys.add(key);
+    const b = mapBio.get(key) || null;
 
-    const b_g = b?.g ?? null, b_r = b?.r ?? null;
-    const m_g = m?.g ?? null, m_r = m?.r ?? null;
+    // نقص بيانات؟
+    const miss =
+      !b || !b.code || !b.name || !Number.isFinite(+b.g) || !Number.isFinite(+b.r) ||
+      !m.code || !m.name || !Number.isFinite(+m.g) || !Number.isFinite(+m.r);
 
-    // الحالات
-    const gStatus = (b_g==null || m_g==null) ? 'miss' : (b_g===m_g ? 'ok' : 'bad');
-    const rStatus = (b_r==null || m_r==null) ? 'miss' : (b_r===m_r ? 'ok' : 'bad');
+    let resG='ناقص', resR='ناقص', note='';
+    if (!miss){
+      // المقارنة الدقيقة
+      if (b.g === m.g){ resG='مطابق'; }
+      else if (b.g > m.g){ resG='مخالف'; note = 'يتم التأكد من صحة الادخال اليدوي غ'; }
+      else if (b.g < m.g){ resG='مخالف'; note = `بعد التأكد من الادخال يتم عمل استيفاء غ بالفارق ${m.g - b.g}`; }
 
-    // الملاحظة: تُظهر فقط عند "مخالف"
-    const noteParts = [];
-    if (gStatus==='bad') noteParts.push('فرق في غ');
-    if (rStatus==='bad') noteParts.push('فرق في ر');
-    const note = noteParts.join(' + ');
+      if (b.r === m.r){ resR='مطابق'; }
+      else if (b.r > m.r){ 
+        resR='مخالف'; 
+        note = note ? note+' — ' : '';
+        note += 'يتم التأكد من صحة الادخال اليدوي ر';
+      }
+      else if (b.r < m.r){
+        resR='مخالف';
+        note = note ? note+' — ' : '';
+        note += `بعد التأكد يتم عمل ر بالفارق ${m.r - b.r}`;
+      }
+    }
 
-    merged.push({
-      code_b: b?.code ?? '',
-      name_b: b?.name ?? '',
-      g_b: b_g ?? 0,
-      r_b: b_r ?? 0,
-      code_m: m?.code ?? '',
-      name_m: m?.name ?? '',
-      g_m: m_g ?? 0,
-      r_m: m_r ?? 0,
-      g_status: gStatus,   // ok | bad | miss
-      r_status: rStatus,
-      note,
+    out.push({
+      code_b: b?.code ?? '', name_b: b?.name ?? '', g_b: b?.g ?? 0, r_b: b?.r ?? 0,
+      code_m: m.code, name_m: m.name, g_m: m.g, r_m: m.r,
+      res_g: resG, res_r: resR,
+      note: miss ? 'بيانات ناقصة' : (note || (resG==='مطابق' && resR==='مطابق' ? '' : 'فرق في غ/ر'))
     });
   }
 
-  // فرز بالكود تصاعدي (أرقام)
-  merged.sort((a,b)=> Number(a.code_b || a.code_m) - Number(b.code_b || b.code_m));
-}
-
-/* عدّادات */
-function updateCounters(list){
-  nTotal.textContent = list.length;
-  nOk.textContent = list.filter(x=>x.g_status==='ok' && x.r_status==='ok').length;
-  nBad.textContent = list.filter(x=>x.g_status==='bad' || x.r_status==='bad').length;
-  nMiss.textContent = list.filter(x=>x.g_status==='miss' || x.r_status==='miss').length;
-}
-
-/* تصفية حسب البحث والفلاتر */
-function getView(){
-  let list = merged;
-
-  if (query){
-    const qlower = query.toLowerCase();
-    list = list.filter(r=>{
-      return String(r.code_b).includes(query) ||
-             String(r.code_m).includes(query) ||
-             r.name_b.toLowerCase().includes(qlower) ||
-             r.name_m.toLowerCase().includes(qlower);
+  // أي عنصر في البصمة غير موجود في اليدوي (نضيفه كسطر ناقص)
+  for (const b of bio){
+    const key = `${b.code}|${normalizeName(b.name)}`;
+    if (keys.has(key)) continue;
+    out.push({
+      code_b: b.code, name_b: b.name, g_b: b.g, r_b: b.r,
+      code_m: '', name_m: '', g_m: 0, r_m: 0,
+      res_g: 'ناقص', res_r: 'ناقص', note:'بيانات ناقصة'
     });
   }
 
-  if (activeFilter==='ok'){
-    list = list.filter(x=>x.g_status==='ok' && x.r_status==='ok');
-  }else if (activeFilter==='bad'){
-    list = list.filter(x=>x.g_status==='bad' || x.r_status==='bad');
-  }else if (activeFilter==='miss'){
-    list = list.filter(x=>x.g_status==='miss' || x.r_status==='miss');
-  }
-  return list;
+  merged = out;
 }
 
-/* عرض الجدول */
+/* رسم الجدول والإحصاءات */
 function render(){
-  const view = getView();
-  updateCounters(view);
-  const rowsHtml = view.map((r,idx)=>{
-    const gBadge = `<span class="badge ${r.g_status}">${label(r.g_status)}</span>`;
-    const rBadge = `<span class="badge ${r.r_status}">${label(r.r_status)}</span>`;
-    return `
-      <tr>
-        <td>${idx+1}</td>
-        <td>${safe(r.code_b)}</td>
-        <td>${safe(r.name_b)}</td>
-        <td>${safe(r.g_b)}</td>
-        <td>${safe(r.r_b)}</td>
-        <td>${safe(r.code_m)}</td>
-        <td>${safe(r.name_m)}</td>
-        <td>${safe(r.g_m)}</td>
-        <td>${safe(r.r_m)}</td>
-        <td>${gBadge}</td>
-        <td>${rBadge}</td>
-        <td>${r.note || ''}</td>
-      </tr>
-    `;
-  }).join('');
-  tbody.innerHTML = rowsHtml || `<tr><td colspan="12">لا توجد بيانات لعرضها…</td></tr>`;
+  // فلترة وبحث
+  const term = normalizeName(q.value||'');
+  const filtered = merged.filter((r)=>{
+    const inSearch = !term ||
+      normalizeName(r.name_b).includes(term) ||
+      normalizeName(r.name_m).includes(term) ||
+      String(r.code_b).includes(term) || String(r.code_m).includes(term);
+
+    const byFilter = (currentFilter==='all') ||
+      (currentFilter==='ok' && r.res_g==='مطابق' && r.res_r==='مطابق') ||
+      (currentFilter==='bad' && (r.res_g==='مخالف' || r.res_r==='مخالف')) ||
+      (currentFilter==='miss' && (r.res_g==='ناقص' || r.res_r==='ناقص'));
+
+    return inSearch && byFilter;
+  });
+
+  // إحصاءات عامة على كامل البيانات
+  const allOk = merged.filter(r=>r.res_g==='مطابق' && r.res_r==='مطابق').length;
+  const allBad = merged.filter(r=>r.res_g==='مخالف' || r.res_r==='مخالف').length;
+  const allMiss = merged.filter(r=>r.res_g==='ناقص' || r.res_r==='ناقص').length;
+
+  okCnt.textContent = allOk;
+  badCnt.textContent = allBad;
+  missCnt.textContent = allMiss;
+  totalCnt.textContent = merged.length;
+
+  rowsCnt.textContent = filtered.length;
+
+  // بناء الصفوف
+  const frag = document.createDocumentFragment();
+  filtered.forEach((r,idx)=>{
+    const tr = document.createElement('tr');
+
+    function td(val, cls=''){ const t=document.createElement('td'); t.textContent=(val??''); if(cls) t.className=cls; return t; }
+    function statusCls(s){ return s==='مطابق'?'ok-cell':(s==='مخالف'?'bad-cell':'miss-cell') }
+
+    tr.appendChild(td(idx+1));                           // م
+    tr.appendChild(td(r.code_b));
+    tr.appendChild(td(r.name_b));
+    tr.appendChild(td(r.g_b));
+    tr.appendChild(td(r.r_b));
+    tr.appendChild(td(r.code_m));
+    tr.appendChild(td(r.name_m));
+    tr.appendChild(td(r.g_m));
+    tr.appendChild(td(r.r_m));
+    tr.appendChild(td(r.res_g, statusCls(r.res_g)));     // نتيجة غ
+    tr.appendChild(td(r.res_r, statusCls(r.res_r)));     // نتيجة ر
+    tr.appendChild(td(r.note||''));                      // الملاحظة
+
+    frag.appendChild(tr);
+  });
+
+  tbody.innerHTML='';
+  tbody.appendChild(frag);
+
+  // تفعيل/تعطيل التصدير
+  dlBtn.disabled = merged.length===0;
 }
 
-function label(st){
-  if (st==='ok') return 'مطابق';
-  if (st==='bad') return 'مخالف';
-  return 'ناقص';
-}
-const safe = v => (v==null ? '' : String(v));
+/* تصدير XLSX بالتنسيق والترتيب المطلوب */
+function exportXLSX(){
+  const rows = [
+    ['م','الكود (بصمة)','الاسم (بصمة)','غ (بصمة)','ر (بصمة)','الكود (يدوي)','الاسم (يدوي)','غ (يدوي)','ر (يدوي)','نتيجة غ','نتيجة ر','الملاحظة']
+  ];
 
-/* أحداث الفلاتر */
-pills.forEach(p=>{
-  p.addEventListener('click', ()=>{
-    pills.forEach(x=>x.classList.remove('active'));
-    p.classList.add('active');
-    activeFilter = p.dataset.filter;
+  merged.forEach((r,i)=>{
+    rows.push([
+      i+1, r.code_b, r.name_b, r.g_b, r.r_b,
+      r.code_m, r.name_m, r.g_m, r.r_m,
+      r.res_g, r.res_r, r.note||''
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'نتيجة المطابقة');
+  XLSX.writeFile(wb, 'canary_monthly_compare.xlsx');
+}
+
+/* ===================== الأحداث ===================== */
+async function handleUpload(which, file, hintEl){
+  if(!file) return;
+  hintEl.textContent = '…جارِ القراءة';
+
+  try{
+    const raw = await readAny(file);
+    const objs = toObjects(raw);
+    const niceName = `${file.name} — ${objs.length} صفًا`;
+    hintEl.textContent = `تم رفع: ${niceName}`;
+
+    if (which==='bio') bio = objs;
+    else man = objs;
+
+    if (bio.length || man.length){
+      mergeCompare();
+      render();
+    }
+  }catch(err){
+    console.error(err);
+    hintEl.textContent = 'فشل التحميل.';
+    alert('تعذّر قراءة الملف.\n' + err.message);
+  }
+}
+
+bioFile.addEventListener('change', e => handleUpload('bio', e.target.files?.[0], bioHint));
+manFile.addEventListener('change', e => handleUpload('man', e.target.files?.[0], manHint));
+
+q.addEventListener('input', render);
+
+$$('.chip').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    $$('.chip').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
     render();
   });
 });
-q.addEventListener('input', ()=>{
-  query = q.value.trim();
-  render();
-});
 
-/* رفع الملفات */
-bioFile.addEventListener('change', async (e)=>{
-  const f = e.target.files?.[0];
-  if(!f) return;
-  bioHint.textContent = "…جاري القراءة";
-  try{
-    const rows = await readExcel(f);
-    bio = rows.map(normalizeRow).filter(x=>x.code || x.name);
-    bioHint.textContent = `تم رفع: ${f.name} — ${bio.length} صفًا`;
-    buildMerged(); render();
-  }catch(err){
-    alert("تعذّر قراءة ملف البصمة.\n" + err.message);
-    bioHint.textContent = "فشل التحميل.";
-  }
-});
+dlBtn.addEventListener('click', exportXLSX);
 
-manFile.addEventListener('change', async (e)=>{
-  const f = e.target.files?.[0];
-  if(!f) return;
-  manHint.textContent = "…جاري القراءة";
-  try{
-    const rows = await readExcel(f);
-    man = rows.map(normalizeRow).filter(x=>x.code || x.name);
-    manHint.textContent = `تم رفع: ${f.name} — ${man.length} صفًا`;
-    buildMerged(); render();
-  }catch(err){
-    alert("تعذّر قراءة الملف اليدوي.\n" + err.message);
-    manHint.textContent = "فشل التحميل.";
-  }
-});
-
-/* تصدير XLSX بنفس ترتيب الأعمدة المطلوب */
-dlBtn.addEventListener('click', ()=>{
-  const view = getView();
-  const header = [
-    "م","الكود (بصمة)","الاسم (بصمة)","غ (بصمة)","ر (بصمة)",
-    "الكود (يدوي)","الاسم (يدوي)","غ (يدوي)","ر (يدوي)",
-    "نتيجة غ","نتيجة ر","الملاحظة"
-  ];
-
-  const rows = view.map((r,i)=>[
-    i+1, r.code_b, r.name_b, r.g_b, r.r_b,
-    r.code_m, r.name_m, r.g_m, r.r_m,
-    label(r.g_status), label(r.r_status), r.note || ""
-  ]);
-
-  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "نتائج المطابقة");
-  XLSX.writeFile(wb, "canary_monthly_compare.xlsx");
-});
+/* بداية نظيفة */
+render();
