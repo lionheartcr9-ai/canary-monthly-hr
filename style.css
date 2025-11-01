@@ -1,89 +1,115 @@
 :root{
-  --bg:#0f172a;
-  --card:#111b33;
-  --line:#26324a;
-  --text:#f5f7fb;      /* نص أبيض أقوى */
-  --muted:#b8c3d9;
-  --ok:#16a34a;        /* أخضر */
-  --bad:#dc2626;       /* أحمر */
-  --miss:#6b7280;      /* رمادي */
-  --ok-bg:#16a34a1a;
-  --bad-bg:#dc26261a;
-  --miss-bg:#6b72801a;
+  --bg:#0e1a24;
+  --card:#122232;
+  --text:#eef6ff;
+  --muted:#b7c6d9;
+  --ok:#126b2e;
+  --ok-bg:#1d8f43;
+  --bad:#9e1e1e;
+  --bad-bg:#c43a3a;
+  --miss:#666;
+  --miss-bg:#9aa3ad;
+  --chip:#23384d;
+  --chip-act:#2a4c6a;
+  --border:#294055;
+  --white:#fff;
 }
 
 *{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Arial,sans-serif}
-body{font-size:16px;line-height:1.6}
-
-.container{max-width:1100px;margin:auto;padding:16px}
-
-h1{font-size:22px;margin:12px 0 6px}
-h2{font-size:18px;margin:0 0 10px;color:var(--muted);font-weight:600}
-
-.uploader-grid{
-  display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font:500 16px/1.6 "Tajawal",system-ui,-apple-system,Segoe UI,Roboto,"Noto Naskh Arabic",sans-serif;
 }
-@media (max-width:780px){.uploader-grid{grid-template-columns:1fr}}
 
+.topbar{
+  position:sticky;top:0;z-index:10;
+  background:#0c1620;border-bottom:1px solid var(--border);
+  padding:10px 16px; font-weight:700; letter-spacing:.2px;
+}
+.brand{font-size:18px}
+
+.container{padding:16px;max-width:1200px;margin:auto}
 .card{
   background:var(--card);
-  border:1px solid var(--line);
+  border:1px solid var(--border);
   border-radius:14px;
   padding:14px;
-  min-height:132px;           /* ثبات الارتفاع على أندرويد لمنع القفزات */
+  margin:14px 0;
+  box-shadow:0 6px 16px rgba(0,0,0,.25);
+}
+.card h2{margin:0 0 10px 0;font-size:17px}
+.hint{color:var(--muted);font-size:14px;margin-top:6px}
+
+.uploader input[type=file]{
+  width:100%;padding:12px;border:1px dashed var(--border);
+  border-radius:12px;background:#0b1721;color:var(--text);
 }
 
-.filebox{display:inline-flex;align-items:center;gap:10px}
-.filebox input{display:none}
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;
-  padding:8px 14px;border-radius:10px;border:1px solid var(--line);
-  color:var(--text);background:#0d1a33;cursor:pointer
+.panel-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  background:var(--chip);color:var(--white);border:1px solid var(--border);
+  border-radius:999px;padding:8px 12px;cursor:pointer;font-weight:600
 }
-.btn.solid{background:#1f3a6b;border-color:#1f3a6b}
+.chip.active{background:var(--chip-act)}
+.chip-ok{background:#0f3a24}
+.chip-bad{background:#4a1111}
+.chip-miss{background:#3a3a3a}
 
-.hint{margin:6px 0 0;color:var(--muted);font-size:14px}
+.stats{display:flex;gap:10px}
+.stat{
+  background:#0b1721;border:1px solid var(--border);border-radius:12px;padding:6px 10px;min-width:70px;text-align:center
+}
+.stat span{display:block;font-weight:800;font-size:18px}
+.stat small{display:block;color:var(--muted);margin-top:2px}
 
-.toolbar{display:grid;gap:10px;margin:14px 0}
+.search{display:grid;gap:6px;margin:10px 0}
 .search input{
-  width:100%;height:44px;border-radius:12px;border:1px solid var(--line);
-  background:var(--card);color:var(--text);padding:0 12px;font-size:15px
+  width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:#0b1721;color:var(--text);font-size:16px
 }
+.count,.note{color:var(--muted);font-size:14px}
 
-.pills{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.pill{
-  background:#12203b;border:1px solid var(--line);color:var(--text);
-  border-radius:999px;padding:6px 12px;cursor:pointer
+.table-wrap{
+  overflow:auto; /* السحب أفقياً على الجوال */
+  border:1px solid var(--border);border-radius:12px;background:#0b1721;margin-top:10px
 }
-.pill.active{background:#1f3a6b}
-.count{font-size:14px;color:var(--muted)}
-
-.table-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px}
-table{width:100%;border-collapse:collapse;table-layout:fixed}
+table{width:1200px; /* عرض أدنى ثابت ليسهل السحب */ border-collapse:collapse;table-layout:fixed}
 thead th{
-  position:sticky;top:0;background:#14213d;border-bottom:1px solid var(--line);
+  position:sticky;top:0;background:#102031;z-index:1;
+  border-bottom:1px solid var(--border)
 }
 th,td{
-  padding:10px 8px;border-bottom:1px solid var(--line);
-  text-align:center;          /* توسيط كل الخلايا */
-  vertical-align:middle;
-  word-wrap:break-word;overflow-wrap:anywhere
+  padding:10px 8px;border-bottom:1px solid #173049;
+  text-align:center;vertical-align:middle;
+  color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis
 }
-tbody tr:hover{background:#13203a}
+tbody tr:hover{background:#0f2131}
 
-.badge{
-  display:inline-block;min-width:68px;padding:6px 10px;border-radius:999px;font-weight:700
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;color:#fff;font-weight:700}
+.ok-cell{background:rgba(29,143,67,.18);border:1px solid rgba(29,143,67,.5)}
+.bad-cell{background:rgba(196,58,58,.18);border:1px solid rgba(196,58,58,.5)}
+.miss-cell{background:rgba(154,163,173,.18);border:1px solid rgba(154,163,173,.5)}
+.c-ok{background:var(--ok-bg)}
+.c-bad{background:var(--bad-bg)}
+.c-miss{background:var(--miss-bg)}
+
+.actions{display:flex;justify-content:flex-end;margin-top:10px}
+.btn{
+  background:#1e5a8f;color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer
 }
-.badge.ok{background:var(--ok-bg);color:var(--ok);border:1px solid #16a34a3d}
-.badge.bad{background:var(--bad-bg);color:var(--bad);border:1px solid #dc26263d}
-.badge.miss{background:var(--miss-bg);color:var(--miss);border:1px solid #6b72803d}
-
-.export{display:flex;align-items:center;gap:12px;margin-top:12px}
-.note{color:var(--muted)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
 
 .footer{
-  margin:24px auto 32px;
-  text-align:center;color:var(--muted)
+  text-align:center;color:var(--muted);
+  border-top:1px solid var(--border);padding:16px;margin-top:16px
 }
-.footer > div{margin:2px 0}
+
+/* تحجيم أفضل على الشاشات الصغيرة */
+@media (max-width:480px){
+  body{font-size:15px}
+  .brand{font-size:17px}
+  th,td{padding:8px 6px}
+}
