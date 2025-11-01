@@ -1,4 +1,3 @@
-/* ——— أساسيات ——— */
 :root{
   --bg:#0f1a22; --card:#12212b; --text:#eaf2f6; --muted:#a9c0cc;
   --ok:#1f7a4d; --bad:#7a1f2a; --miss:#666a72; --line:#234252;
@@ -6,17 +5,14 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; font-family: "Tajawal", system-ui, -apple-system, Segoe UI, Arial;
+  margin:0; font-family:"Tajawal",system-ui,-apple-system,Segoe UI,Arial;
   background:var(--bg); color:var(--text);
 }
 .top{padding:16px 20px; border-bottom:1px solid var(--line)}
 .top h1{margin:0; font-size:22px}
 .wrap{max-width:1100px; margin:24px auto; padding:0 14px}
 
-.card{
-  background:var(--card); border:1px solid var(--line);
-  border-radius:14px; padding:14px; margin-bottom:14px;
-}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px}
 .card h2{margin:4px 0 10px; font-size:18px}
 
 .uploader input{width:100%}
@@ -31,39 +27,38 @@ body{
   padding:10px 14px; border:1px solid var(--line); background:#0c2733;
   color:var(--text); border-radius:10px; cursor:pointer
 }
-.btn:disabled{opacity:0.5; cursor:not-allowed}
+.btn:disabled{opacity:.5; cursor:not-allowed}
 
 .stats{display:flex; gap:8px; flex-wrap:wrap}
 .pill{
   padding:8px 10px; border-radius:999px; border:1px solid var(--line);
-  font-size:14px; background:#0b1f28
+  font-size:14px; background:#0b1f28; cursor:pointer; user-select:none
 }
 .pill.ok{border-color:#1b5e3d}
 .pill.bad{border-color:#5e1b25}
 .pill.miss{border-color:#3e434a}
+.pill.active{outline:2px solid #4aa3d0; background:#0e2a36}
 
 .note{margin:8px 2px 0; color:var(--muted); font-size:13px}
 
-/* ——— جدول قابل للتمرير أفقياً ——— */
+/* جدول قابل للتمرير */
 .table-wrap{overflow:auto}
 table{width:max-content; border-collapse:separate; border-spacing:0; min-width:100%}
-thead th{
-  position:sticky; top:0; background:#0e1b22; z-index:1;
-  padding:10px 8px; border-bottom:1px solid var(--line); white-space:nowrap
-}
+thead th{position:sticky; top:0; background:#0e1b22; z-index:1; padding:10px 8px; border-bottom:1px solid var(--line); white-space:nowrap}
 tbody td{padding:10px 8px; border-bottom:1px solid var(--line)}
 th,td{text-align:center}
 td.wide, th.wide{min-width:220px; text-align:right}
 td.wider, th.wider{min-width:300px; text-align:right}
 
-/* على الموبايل: نوسّع أسماء/ملاحظات ونضيّق الأعمدة الرقمية */
-@media (max-width: 600px){
+/* تلوين نتائج غ/ر داخل الصفحة فقط */
+td.res-ok   { background: rgba(31,122,77,.28); }
+td.res-bad  { background: rgba(122,31,42,.28); }
+td.res-miss { background: rgba(102,106,114,.28); }
+
+@media (max-width:600px){
   thead th, tbody td{padding:10px 6px; font-size:15px}
   td.wide, th.wide{min-width:260px}
   td.wider, th.wider{min-width:360px}
 }
 
-.foot{
-  padding:18px 14px; text-align:center; color:var(--muted);
-  border-top:1px solid var(--line); margin-top:24px; line-height:1.9
-}
+.foot{padding:18px 14px; text-align:center; color:var(--muted); border-top:1px solid var(--line); margin-top:24px; line-height:1.9}
