@@ -1,341 +1,390 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <title>Canary HR – نظام المطابقة الشهرية</title>
-  <meta name="description" content="مطابقة الكود + الاسم ثم مقارنة غ / ر بين ملف البصمة واليدوي مع تلوين وشرح تلقائي.">
-
-  <!-- تحميل مكتبة xlsx قبل أي كود يستخدمها -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
-
-  <style>
-    :root{
-      --bg:#0f172a;          /* أزرق كحلي داكن */
-      --card:#0b1226;
-      --text:#e5e7eb;
-      --muted:#94a3b8;
-      --accent:#1e3a8a;      /* أزرق */
-      --pill:#1d4ed8;        /* أزرق فاتح */
-      --ok:#16a34a;          /* أخضر */
-      --bad:#7f1d1d;         /* خمري */
-      --miss:#6b7280;        /* رمادي */
-      --line:#1f2937;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Kufi Arabic",Tahoma,sans-serif}
-    .wrap{max-width:1100px;margin:auto;padding:20px}
-    h1{font-weight:800;margin:8px 0 18px}
-    .muted{color:var(--muted)}
-    .grid{display:grid;gap:14px}
-    @media(min-width:880px){.grid{grid-template-columns:1fr 1fr}}
-    .card{background:linear-gradient(180deg,var(--card),#0a1124);border:1px solid var(--line);border-radius:14px;padding:14px}
-    .drop{border:2px dashed #334155;border-radius:12px;padding:18px;text-align:center;opacity:.95}
-    .drop input{display:none}
-    .drop b{display:inline-flex;align-items:center;gap:8px}
-    .hint{font-size:.85rem;color:var(--muted)}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .pill{padding:8px 14px;border-radius:999px;font-weight:700}
-    .pill.ok{background:var(--ok)}
-    .pill.bad{background:var(--bad)}
-    .pill.miss{background:var(--miss)}
-    .pill.info{background:var(--pill)}
-    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
-    .btn{background:#111827;border:1px solid #374151;color:#e5e7eb;border-radius:999px;padding:8px 14px;cursor:pointer}
-    .btn.active{background:var(--accent)}
-    table{width:100%;border-collapse:collapse;margin-top:10px;border-radius:12px;overflow:hidden}
-    thead th{background:#0b1735;color:#cbd5e1;padding:10px;border-bottom:1px solid #27324b;white-space:nowrap}
-    tbody td{padding:10px;border-bottom:1px solid #1f2937;vertical-align:middle}
-    tbody tr.ok{background:rgba(22,163,74,.12)}
-    tbody tr.bad{background:rgba(127,29,29,.12)}
-    tbody tr.miss{background:rgba(107,114,128,.12)}
-    .name{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .num{text-align:center}
-    .foot{margin:18px 0 8px;color:var(--muted);font-size:.9rem;border-top:1px solid #1f2937;padding-top:10px}
-    .search{width:100%;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1226;color:#e5e7eb}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>ألوان الكناري — HR المطابقة الشهرية (XLSX/CSV)</title>
+<style>
+  :root{
+    --bg:#0d1320;--card:#121a2a;--muted:#90a4ae99;
+    --txt:#e6f1ff;--green:#1db954;--red:#e53935;--amber:#ffb300;
+    --chip:#1c2840;--chipOn:#203255;--chipTxt:#cfe3ff;
+    --pill:#1a2438;--pillRing:#2b3e68;
+  }
+  html,body{background:var(--bg);color:var(--txt);font-family:system-ui,"Segoe UI","Noto Kufi Arabic",Tahoma,Arial,sans-serif;margin:0}
+  .wrap{max-width:960px;margin-inline:auto;padding:20px 14px 80px}
+  h1{font-size:26px;margin:8px 0 18px;line-height:1.6}
+  .card{background:var(--card);border:1px solid #223050;border-radius:14px;padding:16px 14px;margin-top:14px}
+  .label{font-weight:700;margin-bottom:10px}
+  .uploader{border:2px dashed #2b3e68;border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .uploader input{display:none}
+  .btn{background:#27406b;color:var(--txt);border:none;border-radius:10px;padding:10px 14px;font-weight:700}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+  .chip{background:var(--chip);color:var(--chipTxt);padding:10px 12px;border-radius:999px;border:1px solid var(--pillRing);cursor:pointer}
+  .chip.active{background:var(--chipOn)}
+  .search{width:100%;background:#101a2a;border:1px solid #2b3e68;color:var(--txt);border-radius:12px;padding:12px 14px;font-size:16px}
+  table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:12px}
+  thead th{font-size:13px;text-align:center;color:#bcd0ff;position:sticky;top:0;background:var(--bg);padding:8px}
+  tbody tr{background:var(--pill);border:1px solid var(--pillRing)}
+  td{padding:10px 8px;font-size:14px;vertical-align:middle;white-space:nowrap}
+  td.name{white-space:normal;line-height:1.5}
+  .num{width:60px;text-align:center;color:#a5b8e8}
+  .status{font-weight:800;text-align:center;border-radius:999px;padding:6px 10px;display:inline-block;min-width:90px}
+  .ok{background:color-mix(in srgb,var(--green) 22%, transparent);color:#baffd1;border:1px solid color-mix(in srgb,var(--green) 50%, #ffffff10)}
+  .bad{background:color-mix(in srgb,var(--red) 20%, transparent);color:#ffd0d0;border:1px solid color-mix(in srgb,var(--red) 45%, #ffffff10)}
+  .miss{background:color-mix(in srgb,var(--amber) 18%, transparent);color:#ffe7b3;border:1px solid color-mix(in srgb,var(--amber) 45%, #ffffff10)}
+  .row{padding:0 6px}
+  .grid{display:grid;grid-template-columns:60px 110px 1fr 90px 90px 120px;gap:0;align-items:center}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{background:var(--pill);border:1px solid var(--pillRing);color:#d7e7ff;border-radius:999px;padding:10px 14px;font-weight:800}
+  .pill strong{font-size:18px;margin-inline:6px}
+  .footer{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+  .export{background:#234a3c}
+  .sm{font-size:12px}
+  @media (max-width:720px){
+    .grid{grid-template-columns:46px 86px 1fr 74px 74px 104px}
+    td{font-size:13px}
+  }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>ألوان الكناري للصناعات الغذائية — <span style="color:#60a5fa">HR</span></h1>
-    <div class="muted">مطابقة: الكود + <b>الاسم</b> ثم مقارنة <b>غ / ر</b> بين ملف البصمة واليدوي، مع تلوين وشرح تلقائي.</div>
+<div class="wrap">
+  <h1>🧮 ألوان الكناري للصناعات الغذائية — <b>HR</b> نظام المطابقة الشهرية (XLSX/CSV)</h1>
 
-    <div class="grid" style="margin-top:16px">
-      <!-- ملف البصمة -->
-      <div class="card">
-        <h3>📁 ملف البصمة (شهري)</h3>
-        <label class="drop" id="bioDrop">
-          <input id="bioFile" type="file" accept=".xlsx,.xls,.csv" />
-          <b>اسحب الملف هنا أو اضغط للاختيار</b>
-          <div class="hint" id="bioHint">لم يتم اختيار ملف.</div>
-        </label>
+  <!-- رافع ملف البصمة -->
+  <div class="card">
+    <div class="label">📂 ملف البصمة</div>
+    <div class="uploader">
+      <div>
+        <input id="bioFile" type="file" accept=".xlsx,.xls,.csv">
+        <button class="btn" id="bioPick">اختيار ملف</button>
+        <div class="hint" id="bioHint">اختر ملف البصمة المحفوظ بصيغة XLSX/CSV (UTF-8).</div>
       </div>
-
-      <!-- الملف اليدوي -->
-      <div class="card">
-        <h3>📝 الكشف اليدوي (شهري)</h3>
-        <label class="drop" id="manDrop">
-          <input id="manFile" type="file" accept=".xlsx,.xls,.csv" />
-          <b>اسحب الملف هنا أو اضغط للاختيار</b>
-          <div class="hint" id="manHint">لم يتم اختيار ملف.</div>
-        </label>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:14px">
-      <span class="pill ok">مطابق <span id="okCount">0</span></span>
-      <span class="pill bad">مخالف <span id="badCount">0</span></span>
-      <span class="pill miss">ناقص <span id="missCount">0</span></span>
-      <span class="pill info">تم تحميل: <span id="loadCount">0</span> / <span id="totalCount">0</span></span>
-    </div>
-
-    <input id="q" class="search" placeholder="...بحث بالاسم أو الكود">
-
-    <div class="toolbar">
-      <button class="btn active" data-filter="all">الكل</button>
-      <button class="btn" data-filter="ok">مطابق</button>
-      <button class="btn" data-filter="bad">مخالف</button>
-      <button class="btn" data-filter="miss">ناقص</button>
-      <button class="btn" id="dl">تنزيل النتائج XLSX 💾</button>
-    </div>
-
-    <div class="card">
-      <table id="tbl">
-        <thead>
-          <tr>
-            <th class="num">م</th>
-            <th class="num">(بصمة) الكود</th>
-            <th>(بصمة) الاسم</th>
-            <th class="num">(بصمة) غ</th>
-            <th class="num">(بصمة) ر</th>
-            <th class="num">(يدوي) الكود</th>
-            <th>(يدوي) الاسم</th>
-            <th class="num">(يدوي) غ</th>
-            <th class="num">(يدوي) ر</th>
-            <th>نتيجة ر</th>
-            <th>نتيجة غ</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <div class="foot">
-        © ألوان الكناري للصناعات الغذائية — يعمل محليًا داخل المتصفح. |
-        نظام المطابقة الشهري الذكي للموارد البشرية |
-        إعداد المهندس/ حمدي العريقي — ت: 773143600 — جميع الحقوق محفوظة — نوفمبر © 2025
-      </div>
+      <div class="hint sm" id="bioSummary"></div>
     </div>
   </div>
 
-  <script>
-    // تأكد أن المكتبة محمّلة
-    if (!window.XLSX) {
-      alert("تعذّر تحميل مكتبة XLSX من الإنترنت. رجاءً تحقّق من الاتصال ثم أعد التحميل.");
+  <!-- رافع الملف اليدوي -->
+  <div class="card">
+    <div class="label">📂 الكشف اليدوي</div>
+    <div class="uploader">
+      <div>
+        <input id="manFile" type="file" accept=".xlsx,.xls,.csv">
+        <button class="btn" id="manPick">اختيار ملف</button>
+        <div class="hint" id="manHint">اختر ملف الكشف اليدوي بصيغة XLSX/CSV (UTF-8).</div>
+      </div>
+      <div class="hint sm" id="manSummary"></div>
+    </div>
+  </div>
+
+  <!-- بحث وفلاتر -->
+  <div class="card">
+    <input id="q" class="search" placeholder="🔎 بحث بالاسم أو الكود... مثال: 1041 أو نادر رشاد">
+    <div class="chips" id="filters">
+      <span class="chip active" data-k="all">الكل</span>
+      <span class="chip" data-k="ok">مطابق</span>
+      <span class="chip" data-k="bad">مخالف</span>
+      <span class="chip" data-k="miss">ناقص</span>
+    </div>
+    <div class="bar">
+      <div class="pill">مطابق <strong id="cOk">0</strong></div>
+      <div class="pill">مخالف <strong id="cBad">0</strong></div>
+      <div class="pill">ناقص <strong id="cMiss">0</strong></div>
+      <div class="pill">إجمالي <strong id="cAll">0</strong></div>
+    </div>
+  </div>
+
+  <!-- الجدول -->
+  <div class="card" id="tableCard">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>الكود</th>
+          <th>الاسم</th>
+          <th>غ</th>
+          <th>ر</th>
+          <th>النتيجة</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <div class="footer">
+      <button class="btn export" id="dlBtn">📥 تصدير النتيجة (XLSX)</button>
+      <span class="hint">التصدير يحتوي على كل الصفوف حسب الفلتر الحالي.</span>
+    </div>
+  </div>
+
+  <div class="hint">© ألوان الكناري للمواد الغذائية — يعمل محليًا أو عبر الإنترنت. آخر تحديث: 2025/11.</div>
+</div>
+
+<!-- تحميل مرن لمكتبة XLSX مع بدائل -->
+<script>
+(function(){
+  function load(src, done){
+    var s=document.createElement('script');
+    s.src=src; s.async=true;
+    s.onload=function(){ done(null); };
+    s.onerror=function(){ done(new Error('fail '+src)); };
+    document.head.appendChild(s);
+  }
+  var cdns = [
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+  ];
+  (function tryNext(i){
+    if(i >= cdns.length){
+      alert('تعذّر تحميل مكتبة XLSX.\nأوقف وضع توفير البيانات/الـVPN أو جرّب شبكة أخرى.');
+      return;
     }
-
-    // عناصر DOM
-    const bioFile = document.getElementById('bioFile');
-    const manFile = document.getElementById('manFile');
-    const bioHint = document.getElementById('bioHint');
-    const manHint = document.getElementById('manHint');
-    const q = document.getElementById('q');
-    const tbody = document.querySelector('#tbl tbody');
-    const counts = { ok:0, bad:0, miss:0, total:0, loaded:0 };
-    const okC = document.getElementById('okCount');
-    const badC = document.getElementById('badCount');
-    const missC = document.getElementById('missCount');
-    const loadC = document.getElementById('loadCount');
-    const totalC = document.getElementById('totalCount');
-    const btns = document.querySelectorAll('.btn[data-filter]');
-    const dlBtn = document.getElementById('dl');
-
-    let bio = [];   // [{code,name,g,r}]
-    let man = [];
-    let merged = []; // النتائج
-
-    // قراءة ملف Excel عامّة
-    async function readExcel(file){
-      return new Promise((resolve, reject)=>{
-        const reader = new FileReader();
-        reader.onload = e=>{
-          try{
-            const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-            const ws = wb.Sheets[wb.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(ws, {defval:""});
-            resolve(rows);
-          }catch(err){ reject(err); }
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-      });
-    }
-
-    // تطبيع أسماء الأعمدة العربية المحتملة
-    function normalizeRow(row){
-      const get = (...keys)=> {
-        for(const k of keys){
-          if (k in row) return String(row[k]).trim();
-        }
-        // محاولة مطابقة جزئية
-        const low = Object.fromEntries(Object.entries(row).map(([k,v])=>[k.replace(/\s+/g,''), v]));
-        for(const k of keys){
-          const kk = k.replace(/\s+/g,'');
-          if (kk in low) return String(low[kk]).trim();
-        }
-        return "";
-      };
-
-      // مفاتيح شائعة
-      const code = get("الكود","الكود (بصمة)","كود","code","CODE");
-      const name = get("الاسم","الاسم (بصمة)","اسم","name","NAME");
-      const g = Number(get("غ","غ (بصمة)","غياب","G")) || 0;
-      const r = Number(get("ر","ر (بصمة)","تأخير","R")) || 0;
-
-      return { code: String(code).replace(/[^\d]/g,''), name, g, r };
-    }
-
-    function toDict(arr){
-      const d = {};
-      for(const r of arr){
-        if(!r.code) continue;
-        // إن تعدد الكود نأخذ أول واحد
-        if(!(r.code in d)) d[r.code] = r;
-      }
-      return d;
-    }
-
-    function merge(){
-      const b = toDict(bio);
-      const m = toDict(man);
-      const codes = Array.from(new Set([...Object.keys(b), ...Object.keys(m)]))
-        .filter(Boolean)
-        .sort((a,b)=> Number(a)-Number(b));
-
-      merged = codes.map((code, idx)=>{
-        const B = b[code] || {code,name:"",g:"",r:""};
-        const M = m[code] || {code,name:"",g:"",r:""};
-        // الحكم
-        let tag="ok";
-        if(!B.name || !M.name){ tag="miss"; }
-        else if (String(B.name).trim() !== String(M.name).trim() || Number(B.g)!=Number(M.g) || Number(B.r)!=Number(M.r)){
-          tag="bad";
-        }
-        return {
-          idx: idx+1,
-          code_b: B.code||"",
-          name_b: B.name||"",
-          g_b: B.g===""? "": Number(B.g),
-          r_b: B.r===""? "": Number(B.r),
-          code_m: M.code||"",
-          name_m: M.name||"",
-          g_m: M.g===""? "": Number(M.g),
-          r_m: M.r===""? "": Number(M.r),
-          tag
-        };
-      });
-
-      counts.ok = merged.filter(x=>x.tag==="ok").length;
-      counts.bad = merged.filter(x=>x.tag==="bad").length;
-      counts.miss = merged.filter(x=>x.tag==="miss").length;
-      counts.total = merged.length;
-      counts.loaded = Math.max(bio.length, man.length);
-
-      okC.textContent = counts.ok;
-      badC.textContent = counts.bad;
-      missC.textContent = counts.miss;
-      loadC.textContent = counts.loaded;
-      totalC.textContent = counts.total;
-
-      render();
-    }
-
-    function render(){
-      const fActive = document.querySelector('.btn.active')?.dataset.filter || "all";
-      const query = q.value.trim();
-      const re = query? new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')): null;
-
-      tbody.innerHTML = "";
-      let i=1;
-      for(const row of merged){
-        if(fActive!=="all" && row.tag!==fActive) continue;
-        if(re){
-          const hay = `${row.code_b} ${row.name_b} ${row.code_m} ${row.name_m}`;
-          if(!re.test(hay)) continue;
-        }
-        const tr = document.createElement('tr');
-        tr.className = row.tag;
-        tr.innerHTML = `
-          <td class="num">${i++}</td>
-          <td class="num">${row.code_b||""}</td>
-          <td class="name" title="${row.name_b||""}">${row.name_b||""}</td>
-          <td class="num">${row.g_b===""?"":row.g_b}</td>
-          <td class="num">${row.r_b===""?"":row.r_b}</td>
-          <td class="num">${row.code_m||""}</td>
-          <td class="name" title="${row.name_m||""}">${row.name_m||""}</td>
-          <td class="num">${row.g_m===""?"":row.g_m}</td>
-          <td class="num">${row.r_m===""?"":row.r_m}</td>
-          <td>${(row.r_b===row.r_m)?"مطابق ر":"مخالف ر"}</td>
-          <td>${(row.g_b===row.g_m)?"مطابق غ":"مخالف غ"}</td>
-        `;
-        tbody.appendChild(tr);
-      }
-    }
-
-    // تنزيل النتائج
-    dlBtn.addEventListener('click', ()=>{
-      const rows = [["م","(بصمة) الكود","(بصمة) الاسم","(بصمة) غ","(بصمة) ر","(يدوي) الكود","(يدوي) الاسم","(يدوي) غ","(يدوي) ر","نتيجة ر","نتيجة غ","التصنيف"]];
-      merged.forEach((r,idx)=>{
-        rows.push([idx+1,r.code_b,r.name_b,r.g_b,r.r_b,r.code_m,r.name_m,r.g_m,r.r_m,(r.r_b===r.r_m)?"مطابق ر":"مخالف ر",(r.g_b===r.g_m)?"مطابق غ":"مخالف غ", r.tag]);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "نتائج المطابقة");
-      XLSX.writeFile(wb, "canary_monthly_compare.xlsx");
+    load(cdns[i], function(err){
+      if (err || typeof window.XLSX === 'undefined') tryNext(i+1);
     });
+  })(0);
+})();
+</script>
 
-    // فلاتر الأزرار
-    btns.forEach(b=>{
-      b.addEventListener('click', ()=>{
-        btns.forEach(x=>x.classList.remove('active'));
-        b.classList.add('active');
-        render();
-      });
-    });
-    q.addEventListener('input', render);
+<script>
+/* =========================
+   بيانات وحالة الواجهة
+========================= */
+let bio=[], man=[], merged=[], currentFilter='all', query='';
+const tbody = document.getElementById('tbody');
+const chips = [...document.querySelectorAll('.chip')];
+const q = document.getElementById('q');
+const cOk = document.getElementById('cOk');
+const cBad = document.getElementById('cBad');
+const cMiss= document.getElementById('cMiss');
+const cAll = document.getElementById('cAll');
+const dlBtn = document.getElementById('dlBtn');
 
-    // ربط القرّاء
-    bioFile.addEventListener('change', async e=>{
-      const f = e.target.files?.[0];
-      if(!f) return;
-      bioHint.textContent = "جارِ القراءة...";
-      try{
-        const rows = await readExcel(f);
-        bio = rows.map(normalizeRow).filter(x=>x.code || x.name);
-        bioHint.textContent = `تم اختيار: ${f.name} — ${bio.length} صف`;
-        merge();
-      }catch(err){
-        alert("تعذّر قراءة ملف البصمة.\n" + err.message);
-        bioHint.textContent = "فشل التحميل.";
-      }
-    });
+/* =========================
+   أدوات مساعدة
+========================= */
+const normalizeDigits = s => (''+s).replace(/[^\d.]/g,'').trim();
+const normalizeName   = s => (''+s).replace(/\s+/g,' ').trim();
 
-    manFile.addEventListener('change', async e=>{
-      const f = e.target.files?.[0];
-      if(!f) return;
-      manHint.textContent = "جارِ القراءة...";
-      try{
-        const rows = await readExcel(f);
-        man = rows.map(normalizeRow).filter(x=>x.code || x.name);
-        manHint.textContent = `تم اختيار: ${f.name} — ${man.length} صف`;
-        merge();
-      }catch(err){
-        alert("تعذّر قراءة الملف اليدوي.\n" + err.message);
-        manHint.textContent = "فشل التحميل.";
-      }
+function coerceNum(v){
+  if(v===undefined || v===null || v==='') return 0;
+  const n = Number((''+v).toString().replace(/[^\d.\-]/g,''));
+  return isFinite(n) ? n : 0;
+}
+
+function detectColumns(header){
+  // نحاول إيجاد الأعمدة المطلوبة حتى لو تغير ترتيبها
+  const map = { code:-1, name:-1, g:-1, r:-1 };
+  header.forEach((h,i)=>{
+    const t = (''+h).replace(/\s+/g,'').toLowerCase();
+    if (map.code<0 && /^(?:الكود|code|id)$/.test(t)) map.code=i;
+    else if (map.name<0 && /^(?:الاسم|name)$/.test(t)) map.name=i;
+    else if (map.g<0 && /^(?:غ|g)$/.test(t)) map.g=i;
+    else if (map.r<0 && /^(?:ر|r)$/.test(t)) map.r=i;
+  });
+  return map;
+}
+
+function csvToAOA(text){
+  // بسيط يدعم الفواصل، الأفضل الاعتماد على XLSX التي تقرأ CSV كذلك
+  try{
+    const wb = XLSX.read(text, {type:'string'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(ws, {header:1, raw:true});
+  }catch(e){
+    // fallback بدائي
+    return text.split(/\r?\n/).map(line => line.split(','));
+  }
+}
+
+async function readExcel(file){
+  const buf = await file.arrayBuffer();
+  let wb;
+  // إذا كان CSV خفيف نقرأه كسلسلة
+  if (file.name.toLowerCase().endsWith('.csv')){
+    const text = await file.text();
+    return csvToAOA(text);
+  }
+  wb = XLSX.read(buf, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
+}
+
+function toRows(aoa){
+  if(!aoa || !aoa.length) return [];
+  const header = aoa[0].map(x=>(''+x).trim());
+  const idx = detectColumns(header);
+  const rows = [];
+  for (let i=1;i<aoa.length;i++){
+    const r = aoa[i];
+    if(!r || r.every(x=>(''+x).trim()==='')) continue;
+    const code = normalizeDigits(r[idx.code] ?? '');
+    const name = normalizeName(r[idx.name] ?? '');
+    if(!code && !name) continue;
+    rows.push({
+      code: code, 
+      name: name,
+      g: coerceNum(r[idx.g]),
+      r: coerceNum(r[idx.r])
     });
-  </script>
-  <!-- تحميل مكتبة Excel من الإنترنت -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  }
+  return rows;
+}
+
+function mergeRows(){
+  // فهرس حسب (code+name)
+  const key = (x)=>`${x.code}#${x.name}`;
+  const map = new Map();
+  bio.forEach(x=> map.set(key(x), { code:x.code, name:x.name, g_b:x.g, r_b:x.r, g_m:null, r_m:null }));
+  man.forEach(x=>{
+    const k = key(x);
+    if(map.has(k)){
+      map.get(k).g_m = x.g;
+      map.get(k).r_m = x.r;
+    }else{
+      map.set(k, { code:x.code, name:x.name, g_b:null, r_b:null, g_m:x.g, r_m:x.r });
+    }
+  });
+  const out = [...map.values()];
+  // الحالة
+  out.forEach(o=>{
+    if(o.g_b==null || o.r_b==null || o.g_m==null || o.r_m==null){
+      o.status='miss';
+    }else{
+      const ok = (o.g_b===o.g_m) && (o.r_b===o.r_m);
+      o.status = ok ? 'ok' : 'bad';
+    }
+  });
+  // ترتيب بالكود ثم الاسم
+  out.sort((a,b)=> (Number(a.code)||0)-(Number(b.code)||0) || a.name.localeCompare(b.name,'ar'));
+  merged = out;
+}
+
+function render(){
+  const term = query.trim();
+  const view = merged.filter(x=>{
+    if(currentFilter!=='all' && x.status!==currentFilter) return false;
+    if(!term) return true;
+    const t = term.toLowerCase();
+    return ((''+x.code).includes(t) || x.name.toLowerCase().includes(t));
+  });
+
+  // عدّادات
+  const cntAll = merged.length;
+  const cntOk  = merged.filter(x=>x.status==='ok').length;
+  const cntBad = merged.filter(x=>x.status==='bad').length;
+  const cntMiss= merged.filter(x=>x.status==='miss').length;
+  cAll.textContent  = cntAll;
+  cOk.textContent   = cntOk;
+  cBad.textContent  = cntBad;
+  cMiss.textContent = cntMiss;
+
+  // صفوف
+  tbody.innerHTML='';
+  view.forEach((row,idx)=>{
+    const tr = document.createElement('tr');
+    tr.className='row';
+    tr.innerHTML = `
+      <td class="num">${idx+1}</td>
+      <td class="num">${row.code||''}</td>
+      <td class="name">${row.name||''}</td>
+      <td class="num">${row.g_m ?? row.g_b ?? ''}</td>
+      <td class="num">${row.r_m ?? row.r_b ?? ''}</td>
+      <td class="num">
+        <span class="status ${row.status==='ok'?'ok':row.status==='bad'?'bad':'miss'}">
+          ${row.status==='ok'?'مطابق':row.status==='bad'?'مخالف':'ناقص'}
+        </span>
+      </td>
+    `;
+    // Grid layout for better spacing
+    tr.style.display='grid';
+    tr.style.gridTemplateColumns='60px 110px 1fr 90px 90px 120px';
+    tbody.appendChild(tr);
+  });
+}
+
+/* =========================
+   أحداث الواجهة
+========================= */
+document.getElementById('bioPick').onclick = ()=> document.getElementById('bioFile').click();
+document.getElementById('manPick').onclick = ()=> document.getElementById('manFile').click();
+
+chips.forEach(b=>{
+  b.addEventListener('click', ()=>{
+    chips.forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentFilter = b.dataset.k;
+    render();
+  });
+});
+
+q.addEventListener('input', ()=>{ query = q.value; render(); });
+
+document.getElementById('bioFile').addEventListener('change', async e=>{
+  const f = e.target.files?.[0];
+  if(!f) return;
+  document.getElementById('bioHint').textContent = '...جاري القراءة';
+  try{
+    const aoa = await readExcel(f);
+    bio = toRows(aoa);
+    document.getElementById('bioSummary').textContent = `تم تحميل: ${bio.length} صفًا`;
+    document.getElementById('bioHint').textContent = 'تم الرفع ✅';
+    mergeRows(); render();
+  }catch(err){
+    alert('تعذّر قراءة ملف البصمة.\n'+err.message);
+    document.getElementById('bioHint').textContent = 'فشل التحميل.';
+  }
+});
+
+document.getElementById('manFile').addEventListener('change', async e=>{
+  const f = e.target.files?.[0];
+  if(!f) return;
+  document.getElementById('manHint').textContent = '...جاري القراءة';
+  try{
+    const aoa = await readExcel(f);
+    man = toRows(aoa);
+    document.getElementById('manSummary').textContent = `تم تحميل: ${man.length} صفًا`;
+    document.getElementById('manHint').textContent = 'تم الرفع ✅';
+    mergeRows(); render();
+  }catch(err){
+    alert('تعذّر قراءة الملف اليدوي.\n'+err.message);
+    document.getElementById('manHint').textContent = 'فشل التحميل.';
+  }
+});
+
+/* =========================
+   تصدير XLSX
+========================= */
+dlBtn.addEventListener('click', ()=>{
+  if(!window.XLSX){ alert('مكتبة XLSX لم تُحمّل بعد.'); return; }
+  const term = query.trim();
+  const rows = merged.filter(x=>{
+    if(currentFilter!=='all' && x.status!==currentFilter) return false;
+    if(!term) return true;
+    const t = term.toLowerCase();
+    return ((''+x.code).includes(t) || x.name.toLowerCase().includes(t));
+  });
+
+  const header = ["م","الكود","الاسم","غ (يدوي)","ر (يدوي)","غ (بصمة)","ر (بصمة)","النتيجة"];
+  const aoa = [header];
+  rows.forEach((r,i)=>{
+    aoa.push([
+      i+1,
+      r.code,
+      r.name,
+      r.g_m ?? '',
+      r.r_m ?? '',
+      r.g_b ?? '',
+      r.r_b ?? '',
+      r.status==='ok'?'مطابق':r.status==='bad'?'مخالف':'ناقص'
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "نتائج المطابقة");
+  XLSX.writeFile(wb, "canary_monthly_compare.xlsx");
+});
+</script>
 </body>
 </html>
