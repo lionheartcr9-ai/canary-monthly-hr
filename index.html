@@ -1,390 +1,89 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>ألوان الكناري — HR المطابقة الشهرية (XLSX/CSV)</title>
-<style>
-  :root{
-    --bg:#0d1320;--card:#121a2a;--muted:#90a4ae99;
-    --txt:#e6f1ff;--green:#1db954;--red:#e53935;--amber:#ffb300;
-    --chip:#1c2840;--chipOn:#203255;--chipTxt:#cfe3ff;
-    --pill:#1a2438;--pillRing:#2b3e68;
-  }
-  html,body{background:var(--bg);color:var(--txt);font-family:system-ui,"Segoe UI","Noto Kufi Arabic",Tahoma,Arial,sans-serif;margin:0}
-  .wrap{max-width:960px;margin-inline:auto;padding:20px 14px 80px}
-  h1{font-size:26px;margin:8px 0 18px;line-height:1.6}
-  .card{background:var(--card);border:1px solid #223050;border-radius:14px;padding:16px 14px;margin-top:14px}
-  .label{font-weight:700;margin-bottom:10px}
-  .uploader{border:2px dashed #2b3e68;border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .uploader input{display:none}
-  .btn{background:#27406b;color:var(--txt);border:none;border-radius:10px;padding:10px 14px;font-weight:700}
-  .hint{font-size:12px;color:var(--muted);margin-top:8px}
-  .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
-  .chip{background:var(--chip);color:var(--chipTxt);padding:10px 12px;border-radius:999px;border:1px solid var(--pillRing);cursor:pointer}
-  .chip.active{background:var(--chipOn)}
-  .search{width:100%;background:#101a2a;border:1px solid #2b3e68;color:var(--txt);border-radius:12px;padding:12px 14px;font-size:16px}
-  table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:12px}
-  thead th{font-size:13px;text-align:center;color:#bcd0ff;position:sticky;top:0;background:var(--bg);padding:8px}
-  tbody tr{background:var(--pill);border:1px solid var(--pillRing)}
-  td{padding:10px 8px;font-size:14px;vertical-align:middle;white-space:nowrap}
-  td.name{white-space:normal;line-height:1.5}
-  .num{width:60px;text-align:center;color:#a5b8e8}
-  .status{font-weight:800;text-align:center;border-radius:999px;padding:6px 10px;display:inline-block;min-width:90px}
-  .ok{background:color-mix(in srgb,var(--green) 22%, transparent);color:#baffd1;border:1px solid color-mix(in srgb,var(--green) 50%, #ffffff10)}
-  .bad{background:color-mix(in srgb,var(--red) 20%, transparent);color:#ffd0d0;border:1px solid color-mix(in srgb,var(--red) 45%, #ffffff10)}
-  .miss{background:color-mix(in srgb,var(--amber) 18%, transparent);color:#ffe7b3;border:1px solid color-mix(in srgb,var(--amber) 45%, #ffffff10)}
-  .row{padding:0 6px}
-  .grid{display:grid;grid-template-columns:60px 110px 1fr 90px 90px 120px;gap:0;align-items:center}
-  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .pill{background:var(--pill);border:1px solid var(--pillRing);color:#d7e7ff;border-radius:999px;padding:10px 14px;font-weight:800}
-  .pill strong{font-size:18px;margin-inline:6px}
-  .footer{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
-  .export{background:#234a3c}
-  .sm{font-size:12px}
-  @media (max-width:720px){
-    .grid{grid-template-columns:46px 86px 1fr 74px 74px 104px}
-    td{font-size:13px}
-  }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>HR — نظام المطابقة الشهرية (XLSX/CSV)</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- مكتبة قراءة Excel أونلاين -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="script.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <h1>🧮 ألوان الكناري للصناعات الغذائية — <b>HR</b> نظام المطابقة الشهرية (XLSX/CSV)</h1>
+  <header class="container">
+    <h1>🎛️ HR — نظام المطابقة الشهرية (XLSX/CSV)</h1>
+  </header>
 
-  <!-- رافع ملف البصمة -->
-  <div class="card">
-    <div class="label">📂 ملف البصمة</div>
-    <div class="uploader">
-      <div>
-        <input id="bioFile" type="file" accept=".xlsx,.xls,.csv">
-        <button class="btn" id="bioPick">اختيار ملف</button>
-        <div class="hint" id="bioHint">اختر ملف البصمة المحفوظ بصيغة XLSX/CSV (UTF-8).</div>
+  <main class="container">
+    <section class="uploader-grid">
+      <div class="card">
+        <h2>📁 ملف البصمة</h2>
+        <label class="filebox">
+          <input id="bioFile" type="file" accept=".xlsx,.xls,.csv" />
+          <span class="btn">اختيار ملف</span>
+        </label>
+        <p id="bioHint" class="hint">لم يتم اختيار أي ملف…</p>
       </div>
-      <div class="hint sm" id="bioSummary"></div>
-    </div>
-  </div>
 
-  <!-- رافع الملف اليدوي -->
-  <div class="card">
-    <div class="label">📂 الكشف اليدوي</div>
-    <div class="uploader">
-      <div>
-        <input id="manFile" type="file" accept=".xlsx,.xls,.csv">
-        <button class="btn" id="manPick">اختيار ملف</button>
-        <div class="hint" id="manHint">اختر ملف الكشف اليدوي بصيغة XLSX/CSV (UTF-8).</div>
+      <div class="card">
+        <h2>📁 الكشف اليدوي</h2>
+        <label class="filebox">
+          <input id="manFile" type="file" accept=".xlsx,.xls,.csv" />
+          <span class="btn">اختيار ملف</span>
+        </label>
+        <p id="manHint" class="hint">لم يتم اختيار أي ملف…</p>
       </div>
-      <div class="hint sm" id="manSummary"></div>
-    </div>
-  </div>
+    </section>
 
-  <!-- بحث وفلاتر -->
-  <div class="card">
-    <input id="q" class="search" placeholder="🔎 بحث بالاسم أو الكود... مثال: 1041 أو نادر رشاد">
-    <div class="chips" id="filters">
-      <span class="chip active" data-k="all">الكل</span>
-      <span class="chip" data-k="ok">مطابق</span>
-      <span class="chip" data-k="bad">مخالف</span>
-      <span class="chip" data-k="miss">ناقص</span>
-    </div>
-    <div class="bar">
-      <div class="pill">مطابق <strong id="cOk">0</strong></div>
-      <div class="pill">مخالف <strong id="cBad">0</strong></div>
-      <div class="pill">ناقص <strong id="cMiss">0</strong></div>
-      <div class="pill">إجمالي <strong id="cAll">0</strong></div>
-    </div>
-  </div>
+    <section class="toolbar">
+      <div class="search">
+        <input id="q" type="search" placeholder="🔎 بحث بالاسم أو الكود… مثال: 1041 أو نادر رشاد" />
+      </div>
 
-  <!-- الجدول -->
-  <div class="card" id="tableCard">
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>الكود</th>
-          <th>الاسم</th>
-          <th>غ</th>
-          <th>ر</th>
-          <th>النتيجة</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
+      <div class="pills">
+        <button class="pill active" data-filter="all">الكل</button>
+        <button class="pill" data-filter="ok">مطابق</button>
+        <button class="pill" data-filter="bad">مخالف</button>
+        <button class="pill" data-filter="miss">ناقص</button>
+        <span class="count">إجمالي <b id="nTotal">0</b></span>
+        <span class="count">مطابق <b id="nOk">0</b></span>
+        <span class="count">مخالف <b id="nBad">0</b></span>
+        <span class="count">ناقص <b id="nMiss">0</b></span>
+      </div>
+    </section>
 
-    <div class="footer">
-      <button class="btn export" id="dlBtn">📥 تصدير النتيجة (XLSX)</button>
-      <span class="hint">التصدير يحتوي على كل الصفوف حسب الفلتر الحالي.</span>
-    </div>
-  </div>
+    <section class="table-wrap">
+      <table id="tbl" class="datatable">
+        <thead>
+          <tr>
+            <th>م</th>
+            <th>الكود (بصمة)</th>
+            <th>الاسم (بصمة)</th>
+            <th>غ (بصمة)</th>
+            <th>ر (بصمة)</th>
+            <th>الكود (يدوي)</th>
+            <th>الاسم (يدوي)</th>
+            <th>غ (يدوي)</th>
+            <th>ر (يدوي)</th>
+            <th>نتيجة غ</th>
+            <th>نتيجة ر</th>
+            <th>الملاحظة</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
 
-  <div class="hint">© ألوان الكناري للمواد الغذائية — يعمل محليًا أو عبر الإنترنت. آخر تحديث: 2025/11.</div>
-</div>
+      <div class="export">
+        <button id="dlBtn" class="btn solid">🧾 تصدير النتيجة (XLSX)</button>
+        <small class="note">التصدير يحترم الفلاتر الحالية.</small>
+      </div>
+    </section>
+  </main>
 
-<!-- تحميل مرن لمكتبة XLSX مع بدائل -->
-<script>
-(function(){
-  function load(src, done){
-    var s=document.createElement('script');
-    s.src=src; s.async=true;
-    s.onload=function(){ done(null); };
-    s.onerror=function(){ done(new Error('fail '+src)); };
-    document.head.appendChild(s);
-  }
-  var cdns = [
-    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-  ];
-  (function tryNext(i){
-    if(i >= cdns.length){
-      alert('تعذّر تحميل مكتبة XLSX.\nأوقف وضع توفير البيانات/الـVPN أو جرّب شبكة أخرى.');
-      return;
-    }
-    load(cdns[i], function(err){
-      if (err || typeof window.XLSX === 'undefined') tryNext(i+1);
-    });
-  })(0);
-})();
-</script>
-
-<script>
-/* =========================
-   بيانات وحالة الواجهة
-========================= */
-let bio=[], man=[], merged=[], currentFilter='all', query='';
-const tbody = document.getElementById('tbody');
-const chips = [...document.querySelectorAll('.chip')];
-const q = document.getElementById('q');
-const cOk = document.getElementById('cOk');
-const cBad = document.getElementById('cBad');
-const cMiss= document.getElementById('cMiss');
-const cAll = document.getElementById('cAll');
-const dlBtn = document.getElementById('dlBtn');
-
-/* =========================
-   أدوات مساعدة
-========================= */
-const normalizeDigits = s => (''+s).replace(/[^\d.]/g,'').trim();
-const normalizeName   = s => (''+s).replace(/\s+/g,' ').trim();
-
-function coerceNum(v){
-  if(v===undefined || v===null || v==='') return 0;
-  const n = Number((''+v).toString().replace(/[^\d.\-]/g,''));
-  return isFinite(n) ? n : 0;
-}
-
-function detectColumns(header){
-  // نحاول إيجاد الأعمدة المطلوبة حتى لو تغير ترتيبها
-  const map = { code:-1, name:-1, g:-1, r:-1 };
-  header.forEach((h,i)=>{
-    const t = (''+h).replace(/\s+/g,'').toLowerCase();
-    if (map.code<0 && /^(?:الكود|code|id)$/.test(t)) map.code=i;
-    else if (map.name<0 && /^(?:الاسم|name)$/.test(t)) map.name=i;
-    else if (map.g<0 && /^(?:غ|g)$/.test(t)) map.g=i;
-    else if (map.r<0 && /^(?:ر|r)$/.test(t)) map.r=i;
-  });
-  return map;
-}
-
-function csvToAOA(text){
-  // بسيط يدعم الفواصل، الأفضل الاعتماد على XLSX التي تقرأ CSV كذلك
-  try{
-    const wb = XLSX.read(text, {type:'string'});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    return XLSX.utils.sheet_to_json(ws, {header:1, raw:true});
-  }catch(e){
-    // fallback بدائي
-    return text.split(/\r?\n/).map(line => line.split(','));
-  }
-}
-
-async function readExcel(file){
-  const buf = await file.arrayBuffer();
-  let wb;
-  // إذا كان CSV خفيف نقرأه كسلسلة
-  if (file.name.toLowerCase().endsWith('.csv')){
-    const text = await file.text();
-    return csvToAOA(text);
-  }
-  wb = XLSX.read(buf, {type:'array'});
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''});
-}
-
-function toRows(aoa){
-  if(!aoa || !aoa.length) return [];
-  const header = aoa[0].map(x=>(''+x).trim());
-  const idx = detectColumns(header);
-  const rows = [];
-  for (let i=1;i<aoa.length;i++){
-    const r = aoa[i];
-    if(!r || r.every(x=>(''+x).trim()==='')) continue;
-    const code = normalizeDigits(r[idx.code] ?? '');
-    const name = normalizeName(r[idx.name] ?? '');
-    if(!code && !name) continue;
-    rows.push({
-      code: code, 
-      name: name,
-      g: coerceNum(r[idx.g]),
-      r: coerceNum(r[idx.r])
-    });
-  }
-  return rows;
-}
-
-function mergeRows(){
-  // فهرس حسب (code+name)
-  const key = (x)=>`${x.code}#${x.name}`;
-  const map = new Map();
-  bio.forEach(x=> map.set(key(x), { code:x.code, name:x.name, g_b:x.g, r_b:x.r, g_m:null, r_m:null }));
-  man.forEach(x=>{
-    const k = key(x);
-    if(map.has(k)){
-      map.get(k).g_m = x.g;
-      map.get(k).r_m = x.r;
-    }else{
-      map.set(k, { code:x.code, name:x.name, g_b:null, r_b:null, g_m:x.g, r_m:x.r });
-    }
-  });
-  const out = [...map.values()];
-  // الحالة
-  out.forEach(o=>{
-    if(o.g_b==null || o.r_b==null || o.g_m==null || o.r_m==null){
-      o.status='miss';
-    }else{
-      const ok = (o.g_b===o.g_m) && (o.r_b===o.r_m);
-      o.status = ok ? 'ok' : 'bad';
-    }
-  });
-  // ترتيب بالكود ثم الاسم
-  out.sort((a,b)=> (Number(a.code)||0)-(Number(b.code)||0) || a.name.localeCompare(b.name,'ar'));
-  merged = out;
-}
-
-function render(){
-  const term = query.trim();
-  const view = merged.filter(x=>{
-    if(currentFilter!=='all' && x.status!==currentFilter) return false;
-    if(!term) return true;
-    const t = term.toLowerCase();
-    return ((''+x.code).includes(t) || x.name.toLowerCase().includes(t));
-  });
-
-  // عدّادات
-  const cntAll = merged.length;
-  const cntOk  = merged.filter(x=>x.status==='ok').length;
-  const cntBad = merged.filter(x=>x.status==='bad').length;
-  const cntMiss= merged.filter(x=>x.status==='miss').length;
-  cAll.textContent  = cntAll;
-  cOk.textContent   = cntOk;
-  cBad.textContent  = cntBad;
-  cMiss.textContent = cntMiss;
-
-  // صفوف
-  tbody.innerHTML='';
-  view.forEach((row,idx)=>{
-    const tr = document.createElement('tr');
-    tr.className='row';
-    tr.innerHTML = `
-      <td class="num">${idx+1}</td>
-      <td class="num">${row.code||''}</td>
-      <td class="name">${row.name||''}</td>
-      <td class="num">${row.g_m ?? row.g_b ?? ''}</td>
-      <td class="num">${row.r_m ?? row.r_b ?? ''}</td>
-      <td class="num">
-        <span class="status ${row.status==='ok'?'ok':row.status==='bad'?'bad':'miss'}">
-          ${row.status==='ok'?'مطابق':row.status==='bad'?'مخالف':'ناقص'}
-        </span>
-      </td>
-    `;
-    // Grid layout for better spacing
-    tr.style.display='grid';
-    tr.style.gridTemplateColumns='60px 110px 1fr 90px 90px 120px';
-    tbody.appendChild(tr);
-  });
-}
-
-/* =========================
-   أحداث الواجهة
-========================= */
-document.getElementById('bioPick').onclick = ()=> document.getElementById('bioFile').click();
-document.getElementById('manPick').onclick = ()=> document.getElementById('manFile').click();
-
-chips.forEach(b=>{
-  b.addEventListener('click', ()=>{
-    chips.forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    currentFilter = b.dataset.k;
-    render();
-  });
-});
-
-q.addEventListener('input', ()=>{ query = q.value; render(); });
-
-document.getElementById('bioFile').addEventListener('change', async e=>{
-  const f = e.target.files?.[0];
-  if(!f) return;
-  document.getElementById('bioHint').textContent = '...جاري القراءة';
-  try{
-    const aoa = await readExcel(f);
-    bio = toRows(aoa);
-    document.getElementById('bioSummary').textContent = `تم تحميل: ${bio.length} صفًا`;
-    document.getElementById('bioHint').textContent = 'تم الرفع ✅';
-    mergeRows(); render();
-  }catch(err){
-    alert('تعذّر قراءة ملف البصمة.\n'+err.message);
-    document.getElementById('bioHint').textContent = 'فشل التحميل.';
-  }
-});
-
-document.getElementById('manFile').addEventListener('change', async e=>{
-  const f = e.target.files?.[0];
-  if(!f) return;
-  document.getElementById('manHint').textContent = '...جاري القراءة';
-  try{
-    const aoa = await readExcel(f);
-    man = toRows(aoa);
-    document.getElementById('manSummary').textContent = `تم تحميل: ${man.length} صفًا`;
-    document.getElementById('manHint').textContent = 'تم الرفع ✅';
-    mergeRows(); render();
-  }catch(err){
-    alert('تعذّر قراءة الملف اليدوي.\n'+err.message);
-    document.getElementById('manHint').textContent = 'فشل التحميل.';
-  }
-});
-
-/* =========================
-   تصدير XLSX
-========================= */
-dlBtn.addEventListener('click', ()=>{
-  if(!window.XLSX){ alert('مكتبة XLSX لم تُحمّل بعد.'); return; }
-  const term = query.trim();
-  const rows = merged.filter(x=>{
-    if(currentFilter!=='all' && x.status!==currentFilter) return false;
-    if(!term) return true;
-    const t = term.toLowerCase();
-    return ((''+x.code).includes(t) || x.name.toLowerCase().includes(t));
-  });
-
-  const header = ["م","الكود","الاسم","غ (يدوي)","ر (يدوي)","غ (بصمة)","ر (بصمة)","النتيجة"];
-  const aoa = [header];
-  rows.forEach((r,i)=>{
-    aoa.push([
-      i+1,
-      r.code,
-      r.name,
-      r.g_m ?? '',
-      r.r_m ?? '',
-      r.g_b ?? '',
-      r.r_b ?? '',
-      r.status==='ok'?'مطابق':r.status==='bad'?'مخالف':'ناقص'
-    ]);
-  });
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "نتائج المطابقة");
-  XLSX.writeFile(wb, "canary_monthly_compare.xlsx");
-});
-</script>
+  <footer class="container footer">
+    <div>نظام المطابقة الشهري الذكي للموارد البشرية - اليمن</div>
+    <div>إعداد المهندس/ حمدي العريقي — ت: 7773143600</div>
+    <div>جميع الحقوق محفوظة نوفمبر 2025م</div>
+  </footer>
 </body>
 </html>
