@@ -2,85 +2,88 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <title>HR — نظام المطابقة الشهرية (XLSX/CSV)</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- مكتبة قراءة Excel أونلاين -->
+  <!-- مكتبة XLSX لقراءة/تصدير ملفات إكسل -->
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="script.js"></script>
 </head>
 <body>
-  <header class="container">
-    <h1>🎛️ HR — نظام المطابقة الشهرية (XLSX/CSV)</h1>
+  <header class="topbar">
+    <div class="brand">🧮 HR — نظام المطابقة الشهرية (XLSX/CSV)</div>
   </header>
 
   <main class="container">
-    <section class="uploader-grid">
-      <div class="card">
-        <h2>📁 ملف البصمة</h2>
-        <label class="filebox">
-          <input id="bioFile" type="file" accept=".xlsx,.xls,.csv" />
-          <span class="btn">اختيار ملف</span>
-        </label>
-        <p id="bioHint" class="hint">لم يتم اختيار أي ملف…</p>
-      </div>
-
-      <div class="card">
-        <h2>📁 الكشف اليدوي</h2>
-        <label class="filebox">
-          <input id="manFile" type="file" accept=".xlsx,.xls,.csv" />
-          <span class="btn">اختيار ملف</span>
-        </label>
-        <p id="manHint" class="hint">لم يتم اختيار أي ملف…</p>
+    <section class="card">
+      <h2>📁 ملف البصمة (XLSX/CSV)</h2>
+      <div class="uploader">
+        <input id="bioFile" type="file" accept=".xlsx,.xls,.csv" />
+        <div id="bioHint" class="hint">لم يتم اختيار أي ملف…</div>
       </div>
     </section>
 
-    <section class="toolbar">
+    <section class="card">
+      <h2>📁 الكشف اليدوي (XLSX/CSV)</h2>
+      <div class="uploader">
+        <input id="manFile" type="file" accept=".xlsx,.xls,.csv" />
+        <div id="manHint" class="hint">لم يتم اختيار أي ملف…</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="panel-head">
+        <div class="chips">
+          <button class="chip chip-all active" data-filter="all">الكل</button>
+          <button class="chip chip-ok" data-filter="ok">مطابق</button>
+          <button class="chip chip-bad" data-filter="bad">مخالف</button>
+          <button class="chip chip-miss" data-filter="miss">ناقص</button>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><span id="okCnt">0</span><small>مطابق</small></div>
+          <div class="stat"><span id="badCnt">0</span><small>مخالف</small></div>
+          <div class="stat"><span id="missCnt">0</span><small>ناقص</small></div>
+          <div class="stat"><span id="totalCnt">0</span><small>إجمالي</small></div>
+        </div>
+      </div>
+
       <div class="search">
         <input id="q" type="search" placeholder="🔎 بحث بالاسم أو الكود… مثال: 1041 أو نادر رشاد" />
+        <div class="count">عدد الصفوف: <span id="rowsCnt">0</span></div>
+        <div class="note">المطابقة تشترط تطابق <b>الكود والاسم</b> بين الملفين ثم مقارنة الحالتين (غ/ر).</div>
       </div>
 
-      <div class="pills">
-        <button class="pill active" data-filter="all">الكل</button>
-        <button class="pill" data-filter="ok">مطابق</button>
-        <button class="pill" data-filter="bad">مخالف</button>
-        <button class="pill" data-filter="miss">ناقص</button>
-        <span class="count">إجمالي <b id="nTotal">0</b></span>
-        <span class="count">مطابق <b id="nOk">0</b></span>
-        <span class="count">مخالف <b id="nBad">0</b></span>
-        <span class="count">ناقص <b id="nMiss">0</b></span>
+      <!-- جدول النتائج (قابل للسحب أفقياً على الجوال) -->
+      <div class="table-wrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>م</th>
+              <th>الكود (بصمة)</th>
+              <th>الاسم (بصمة)</th>
+              <th>غ (بصمة)</th>
+              <th>ر (بصمة)</th>
+              <th>الكود (يدوي)</th>
+              <th>الاسم (يدوي)</th>
+              <th>غ (يدوي)</th>
+              <th>ر (يدوي)</th>
+              <th>نتيجة غ</th>
+              <th>نتيجة ر</th>
+              <th>الملاحظة</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
       </div>
-    </section>
 
-    <section class="table-wrap">
-      <table id="tbl" class="datatable">
-        <thead>
-          <tr>
-            <th>م</th>
-            <th>الكود (بصمة)</th>
-            <th>الاسم (بصمة)</th>
-            <th>غ (بصمة)</th>
-            <th>ر (بصمة)</th>
-            <th>الكود (يدوي)</th>
-            <th>الاسم (يدوي)</th>
-            <th>غ (يدوي)</th>
-            <th>ر (يدوي)</th>
-            <th>نتيجة غ</th>
-            <th>نتيجة ر</th>
-            <th>الملاحظة</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-
-      <div class="export">
-        <button id="dlBtn" class="btn solid">🧾 تصدير النتيجة (XLSX)</button>
-        <small class="note">التصدير يحترم الفلاتر الحالية.</small>
+      <div class="actions">
+        <button id="dlBtn" class="btn" disabled>🧾 تصدير النتيجة (XLSX)</button>
       </div>
     </section>
   </main>
 
-  <footer class="container footer">
+  <footer class="footer">
     <div>نظام المطابقة الشهري الذكي للموارد البشرية - اليمن</div>
     <div>إعداد المهندس/ حمدي العريقي — ت: 7773143600</div>
     <div>جميع الحقوق محفوظة نوفمبر 2025م</div>
