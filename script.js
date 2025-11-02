@@ -1,366 +1,313 @@
-/* ================================
-   Canary Monthly HR — script.js (V7)
-   - XLSX only
-   - Arabic-first UI (RTL)
-   - Code-first matching + soft name normalization
-   - Robust rounding for G/R
-   - Search + filters + XLSX export
-=================================== */
+/* =======================
+   Globals + DOM bindings
+======================= */
+let fpData = null;        // بيانات البصمة (صفوف JSON)
+let manualData = null;    // بيانات اليدوي
+let fullResults = [];     // النتيجة الكاملة قبل الفلترة
 
-// ------- عناصر DOM أساسية -------
-const fpInput = document.getElementById("fpFile");
-const manualInput = document.getElementById("manualFile");
-const startBtn = document.getElementById("startBtn");
-const downloadBtn = document.getElementById("downloadBtn");
-const statsTotal = document.getElementById("stat-total");
-const statsMatch = document.getElementById("stat-match");
-const statsMismatch = document.getElementById("stat-mismatch");
-const statsMissing = document.getElementById("stat-missing");
-const filterAll = document.getElementById("filter-all");
-const filterOk = document.getElementById("filter-ok");
-const filterBad = document.getElementById("filter-bad");
-const filterMiss = document.getElementById("filter-miss");
-const tableBody = document.getElementById("result-body");
-const searchInput = document.getElementById("search");
+const fpInput          = document.getElementById('fpFile');
+const manualInput      = document.getElementById('manualFile');
+const fpNameSpan       = document.getElementById('fpName');
+const manualNameSpan   = document.getElementById('manualName');
 
-// الحالة الداخلية
-let fpRows = [];      // بصمة
-let mnRows = [];      // يدوي
-let results = [];     // نتيجة المعروضة
-let rawResults = [];  // نتيجة كاملة بدون فلترة
+const startBtn         = document.getElementById('startCompare');
+const downloadBtn      = document.getElementById('downloadXlsx');
 
-// ====== أدوات قراءة XLSX ======
+const statAllBtn       = document.getElementById('statAll');
+const statMatchBtn     = document.getElementById('statMatch');
+const statDiffBtn      = document.getElementById('statDiff');
+const statMissingBtn   = document.getElementById('statMissing');
+
+const searchBox        = document.getElementById('searchBox');
+const resultBody       = document.getElementById('resultBody');
+
+/* =======================
+   Helpers
+======================= */
+
+// قراءة أول ورقة من ملف XLSX كـ JSON
 async function readXlsx(file) {
-  if (!file) return [];
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data, { type: "array" });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
-  return rows.map(normalizeRow);
+  const buf = await file.arrayBuffer();
+  const wb  = XLSX.read(buf, { type: 'array' });
+  const sh  = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sh, { defval: "" }); // لا نترك undefined
 }
 
-// نعتمد العناوين: الكود | الاسم | غ | ر
-function normalizeRow(r) {
-  const code = r["الكود"] ?? r["code"] ?? r["Code"] ?? r["ID"] ?? r["id"] ?? "";
-  const name = r["الاسم"] ?? r["name"] ?? r["Name"] ?? "";
-  const g = r["غ"] ?? r["G"] ?? r["Abs"] ?? r["abs"] ?? "";
-  const rdays = r["ر"] ?? r["R"] ?? r["Leave"] ?? r["leave"] ?? "";
-
-  return {
-    الكود: safeCode(code),
-    الاسم: String(name).trim(),
-    غ: toNumberSafe(g),
-    ر: toNumberSafe(rdays),
-  };
+// تحديث حالة زر "بدء المطابقة"
+function updateStartState() {
+  startBtn.disabled = !(fpData && manualData);
 }
 
-// الكود كسلسلة digits
-function safeCode(val) {
-  const s = String(val).trim();
-  return s.replace(/[^\d]/g, "");
-}
-
-// رقم آمن + تقريب
-function toNumberSafe(v) {
-  if (v === "" || v === null || v === undefined) return 0;
-  const n = Number(String(v).replace(",", "."));
-  if (isNaN(n)) return 0;
-  return round2(n);
-}
-
-// ✅ تقريب بدرجتين (يعالج 6.500000625 = 6.5)
-function round2(num) {
+// تقريب القيم العشرية لمرتبتين
+const roundValue = (num) => {
+  if (num === "" || num === null || isNaN(num)) return 0;
   return Math.round((parseFloat(num) + Number.EPSILON) * 100) / 100;
-}
+};
 
-// ====== تطبيع عربي للأسماء ======
+// تطبيع بسيط للنص العربي (إزالة تشكيل/مدود/مسافات زائدة + توحيد الألف/الياء/الهاء…)
 function normalizeArabic(str) {
   if (!str) return "";
-  let s = String(str).trim();
-
-  // إزالة التشكيل والرموز
-  s = s
-    .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g, "")
-    .replace(/[\u0640\-\_\.\،\,\؛\;\:\/\(\)\[\]\{\}\«\»\"\']/g, " ")
-    .replace(/\s+/g, " ");
-
-  // توحيد أحرف
-  s = s
-    .replace(/[أإآ]/g, "ا")
+  return String(str)
+    .replace(/[ًٌٍَُِّْـ]/g, "")          // التشكيل والمد
+    .replace(/[\u200F\u200E]/g, "")      // علامات اتجاه
+    .replace(/[إأآا]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/ة/g, "ه")
-    .replace(/ؤ/g, "و")
-    .replace(/ئ/g, "ي");
-
-  return s.trim();
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function tokenizeName(str) {
-  return normalizeArabic(str)
+// تقسيم الاسم إلى حروف عربية فقط للمقارنة المرنة
+function tokenizeName(name) {
+  return normalizeArabic(name)
+    .replace(/[^ء-ي\s]/g, "")
     .split(" ")
     .filter(Boolean);
 }
 
-// شبه-تشابه بالاعتماد على بداية الاسم + تقاطع الكلمات
-function nameSimilarity(a, b) {
-  const A = tokenizeName(a);
-  const B = tokenizeName(b);
-  if (A.length === 0 || B.length === 0) return 0;
-
-  const firstBoost = A[0] === B[0] ? 0.3 : 0;
-
-  const setA = new Set(A);
-  const setB = new Set(B);
+// درجة تشابه بسيطة (Dice coefficient) بين قائمتين من الكلمات
+function diceSimilarity(tokensA, tokensB) {
+  const setA = new Set(tokensA);
+  const setB = new Set(tokensB);
   let inter = 0;
-  for (const w of setA) if (setB.has(w)) inter++;
-
-  const union = new Set([...A, ...B]).size;
-  const jacc = union ? inter / union : 0;
-
-  let secondBoost = 0;
-  if (A.length > 1 && B.length > 1 && A[1] === B[1]) secondBoost = 0.2;
-
-  return Math.min(1, jacc + firstBoost + secondBoost);
+  setA.forEach(t => { if (setB.has(t)) inter++; });
+  const denom = setA.size + setB.size;
+  return denom ? (2 * inter) / denom : 0;
 }
 
-// ====== المقارنة الرئيسية ======
-function compareRecords(fp, mn) {
-  // فهرس سريع لليدوي حسب الكود
-  const manualByCode = new Map();
-  mn.forEach((row) => {
-    const code = row["الكود"];
-    if (!manualByCode.has(code)) manualByCode.set(code, []);
-    manualByCode.get(code).push(row);
-  });
-
-  const out = [];
-
-  // نمر على ملف البصمة
-  fp.forEach((f) => {
-    const code = f["الكود"];
-    const nameF = f["الاسم"];
-
-    // لا يوجد هذا الكود في اليدوي → ناقص
-    if (!manualByCode.has(code)) {
-      out.push(makeRow(f, null, "ناقص", "ناقص", "بيانات ناقصة أو غير موجودة في الكشف اليدوي"));
-      return;
-    }
-
-    // لو وجد أكثر من اسم لنفس الكود، نختار الأعلى تشابهًا
-    const candidates = manualByCode.get(code);
-    let best = candidates[0];
-    let bestScore = nameSimilarity(nameF, candidates[0]["الاسم"]);
-    for (let i = 1; i < candidates.length; i++) {
-      const s = nameSimilarity(nameF, candidates[i]["الاسم"]);
-      if (s > bestScore) {
-        best = candidates[i];
-        bestScore = s;
-      }
-    }
-
-    // مقارنة غ/ر — الكود متطابق مهما اختلف الاسم
-    const gF = round2(f["غ"]);
-    const rF = round2(f["ر"]);
-    const gM = round2(best["غ"]);
-    const rM = round2(best["ر"]);
-
-    let resG = "";
-    let resR = "";
-    let note = "";
-
-    // غ
-    if (gF === gM) {
-      resG = "مطابق";
-    } else if (gF > gM) {
-      resG = "مخالف";
-      note = addNote(note, "يتم التأكد من صحة الادخال اليدوي غ");
-    } else {
-      resG = "مخالف";
-      note = addNote(note, `بعد التأكد من الادخال يتم عمل استيفاء غ بالفارق ${round2(gM - gF)}`);
-    }
-
-    // ر
-    if (rF === rM) {
-      resR = "مطابق";
-    } else if (rF > rM) {
-      resR = "مخالف";
-      note = addNote(note, "يتم التأكد من صحة الادخال اليدوي ر");
-    } else if (rF < rM) {
-      resR = "مخالف";
-      note = addNote(note, `بعد التأكد من الادخال يتم عمل ر بالفارق ${round2(rM - rF)}`);
-    }
-
-    // اختلاف اسم واضح مع كود صحيح → لا نرفض؛ فقط وسم مرن
-    if (bestScore < 0.6) {
-      note = addNote(note, `مرن: اختلاف اسم (بصمة: ${nameF} | يدوي: ${best["الاسم"]})`);
-    }
-
-    out.push({
-      م: 0, // يُملأ لاحقًا
-      "الكود (بصمة)": code,
-      "الاسم (بصمة)": nameF,
-      "غ (بصمة)": gF,
-      "ر (بصمة)": rF,
-      "الكود (يدوي)": best["الكود"],
-      "الاسم (يدوي)": best["الاسم"],
-      "غ (يدوي)": gM,
-      "ر (يدوي)": rM,
-      "نتيجة غ": resG,
-      "نتيجة ر": resR,
-      الملاحظة: note || "مطابق",
-    });
-  });
-
-  // ترتيب تصاعدي حسب الكود + ترقيم عمود م
-  out.sort((a, b) => Number(a["الكود (بصمة)"]) - Number(b["الكود (بصمة)"]));
-  out.forEach((r, i) => (r["م"] = i + 1));
-
-  return out;
+// تطبيع مرن للاسم: يعتبر "عثمان عبده مسعد سعيد" ≈ "عثمان عبده مسعد الفلاحي"
+function namesClose(a, b, threshold = 0.60) {
+  const ta = tokenizeName(a);
+  const tb = tokenizeName(b);
+  if (!ta.length || !tb.length) return false;
+  return diceSimilarity(ta, tb) >= threshold;
 }
 
-function addNote(oldNote, extra) {
-  if (!oldNote) return extra;
-  return `${oldNote} • ${extra}`;
-}
-
-function makeRow(fpRow, mnRow, resG, resR, note) {
+// تأمين هيكل الصف (خرائط الأعمدة العربية المعتمدة)
+function mapRow(row) {
   return {
-    م: 0,
-    "الكود (بصمة)": fpRow ? fpRow["الكود"] : "",
-    "الاسم (بصمة)": fpRow ? fpRow["الاسم"] : "",
-    "غ (بصمة)": fpRow ? round2(fpRow["غ"]) : 0,
-    "ر (بصمة)": fpRow ? round2(fpRow["ر"]) : 0,
-    "الكود (يدوي)": mnRow ? mnRow["الكود"] : "",
-    "الاسم (يدوي)": mnRow ? mnRow["الاسم"] : "",
-    "غ (يدوي)": mnRow ? round2(mnRow["غ"]) : 0,
-    "ر (يدوي)": mnRow ? round2(mnRow["ر"]) : 0,
-    "نتيجة غ": resG,
-    "نتيجة ر": resR,
-    الملاحظة: note,
+    code: String(row["الكود"] ?? row["الكود (بصمة)"] ?? row["الكود (يدوي)"] ?? "").trim(),
+    name: String(row["الاسم"] ?? row["الاسم (بصمة)"] ?? row["الاسم (يدوي)"] ?? "").trim(),
+    g: roundValue(row["غ"] ?? row["غ (بصمة)"] ?? row["غ (يدوي)"] ?? 0),
+    r: roundValue(row["ر"] ?? row["ر (بصمة)"] ?? row["ر (يدوي)"] ?? 0),
   };
 }
 
-// ====== عرض النتائج ======
-function renderStats(list) {
-  const total = list.length;
-  const ok = list.filter((r) => r["نتيجة غ"] === "مطابق" && r["نتيجة ر"] === "مطابق").length;
-  const bad = list.filter((r) => r["نتيجة غ"] === "مخالف" || r["نتيجة ر"] === "مخالف").length;
-  const miss = list.filter((r) => r["نتيجة غ"] === "ناقص" || r["نتيجة ر"] === "ناقص").length;
-
-  statsTotal.textContent = total;
-  statsMatch.textContent = ok;
-  statsMismatch.textContent = bad;
-  statsMissing.textContent = miss;
+// بناء صف العرض للجدول
+function buildRow(idx, rec) {
+  const tr = document.createElement('tr');
+  const cells = [
+    idx + 1,
+    rec.code_fp, rec.name_fp, rec.g_fp, rec.r_fp,
+    rec.code_m,  rec.name_m,  rec.g_m, rec.r_m,
+    rec.res_g,   rec.res_r,   rec.note
+  ];
+  cells.forEach(v => {
+    const td = document.createElement('td');
+    td.textContent = (v === undefined || v === null) ? "" : v;
+    tr.appendChild(td);
+  });
+  return tr;
 }
 
+// رسم الجدول مع فلترة اختيارية
 function renderTable(list) {
-  tableBody.innerHTML = "";
-  const frag = document.createDocumentFragment();
-  list.forEach((r) => {
-    const tr = document.createElement("tr");
-    const clsG = r["نتيجة غ"] === "مطابق" ? "badge green" : r["نتيجة غ"] === "مخالف" ? "badge red" : "badge gray";
-    const clsR = r["نتيجة ر"] === "مطابق" ? "badge green" : r["نتيجة ر"] === "مخالف" ? "badge red" : "badge gray";
-
-    tr.innerHTML = `
-      <td>${r["م"]}</td>
-      <td>${r["الكود (بصمة)"]}</td>
-      <td>${r["الاسم (بصمة)"]}</td>
-      <td>${r["غ (بصمة)"]}</td>
-      <td>${r["ر (بصمة)"]}</td>
-      <td>${r["الكود (يدوي)"]}</td>
-      <td>${r["الاسم (يدوي)"]}</td>
-      <td>${r["غ (يدوي)"]}</td>
-      <td>${r["ر (يدوي)"]}</td>
-      <td><span class="${clsG}">${r["نتيجة غ"]}</span></td>
-      <td><span class="${clsR}">${r["نتيجة ر"]}</span></td>
-      <td>${r["الملاحظة"] || ""}</td>
-    `;
-    frag.appendChild(tr);
-  });
-  tableBody.appendChild(frag);
-  renderStats(list);
+  resultBody.innerHTML = "";
+  list.forEach((rec, i) => resultBody.appendChild(buildRow(i, rec)));
 }
 
-// ====== فلاتر + بحث ======
-function applyFilter(type) {
-  let list = [...rawResults];
-  if (type === "ok") {
-    list = list.filter((r) => r["نتيجة غ"] === "مطابق" && r["نتيجة ر"] === "مطابق");
-  } else if (type === "bad") {
-    list = list.filter((r) => r["نتيجة غ"] === "مخالف" || r["نتيجة ر"] === "مخالف");
-  } else if (type === "miss") {
-    list = list.filter((r) => r["نتيجة غ"] === "ناقص" || r["نتيجة ر"] === "ناقص");
-  }
-  results = list;
-  applySearch();
+// تحديث العدادات وتفعيل زر تنزيل
+function updateStats() {
+  const all = fullResults.length;
+  const match = fullResults.filter(r => r.res_g === "مطابق" && r.res_r === "مطابق").length;
+  const diff = fullResults.filter(r => r.res_g === "مخالف" || r.res_r === "مخالف").length;
+  const missing = fullResults.filter(r => r.res_g === "ناقص" && r.res_r === "ناقص").length;
+
+  statAllBtn.textContent     = `الكل ${all}`;
+  statMatchBtn.textContent   = `مطابق ${match}`;
+  statDiffBtn.textContent    = `مخالف ${diff}`;
+  statMissingBtn.textContent = `ناقص/غير مكتمل ${missing}`;
+
+  downloadBtn.disabled = all === 0;
 }
 
-function applySearch() {
-  const q = normalizeArabic(searchInput?.value || "");
-  if (!q) {
-    renderTable(results);
-    return;
+// فلترة حسب نوع
+function filterResults(type) {
+  let filtered = fullResults.slice();
+  if (type === "match") {
+    filtered = filtered.filter(r => r.res_g === "مطابق" && r.res_r === "مطابق");
+  } else if (type === "diff") {
+    filtered = filtered.filter(r => r.res_g === "مخالف" || r.res_r === "مخالف");
+  } else if (type === "missing") {
+    filtered = filtered.filter(r => r.res_g === "ناقص" && r.res_r === "ناقص");
   }
-  const filtered = results.filter((r) => {
-    const code = String(r["الكود (بصمة)"]);
-    const name1 = normalizeArabic(r["الاسم (بصمة)"]);
-    const name2 = normalizeArabic(r["الاسم (يدوي)"]);
-    return code.includes(q) || name1.includes(q) || name2.includes(q);
-  });
+  // تطبيق بحث إن وجد
+  const q = normalizeArabic(searchBox.value);
+  if (q) {
+    filtered = filtered.filter(r =>
+      normalizeArabic(r.name_fp).includes(q) ||
+      normalizeArabic(r.name_m).includes(q) ||
+      String(r.code_fp).includes(q) ||
+      String(r.code_m).includes(q)
+    );
+  }
   renderTable(filtered);
 }
 
-// ====== تصدير XLSX ======
-function downloadXlsx(list) {
-  if (!list.length) return;
-  const data = list.map((r) => ({
-    "م": r["م"],
-    "الكود (بصمة)": r["الكود (بصمة)"],
-    "الاسم (بصمة)": r["الاسم (بصمة)"],
-    "غ (بصمة)": r["غ (بصمة)"],
-    "ر (بصمة)": r["ر (بصمة)"],
-    "الكود (يدوي)": r["الكود (يدوي)"],
-    "الاسم (يدوي)": r["الاسم (يدوي)"],
-    "غ (يدوي)": r["غ (يدوي)"],
-    "ر (يدوي)": r["ر (يدوي)"],
-    "نتيجة غ": r["نتيجة غ"],
-    "نتيجة ر": r["نتيجة ر"],
-    "الملاحظة": r["الملاحظة"],
-  }));
-  const ws = XLSX.utils.json_to_sheet(data, { header: Object.keys(data[0] || {}) });
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "canary_monthly_result");
-  XLSX.writeFile(wb, "canary_monthly_result.xlsx");
+/* =======================
+   Core Compare
+======================= */
+
+// مقارنة رئيسية مع التطبيع المرن + أولوية الكود
+function compareRecords(fpRows, manualRows) {
+  // خرائط
+  const fp = fpRows.map(mapRow);
+  const mn = manualRows.map(mapRow);
+
+  // فهرس اليدوي حسب الكود (قد يكون الكود مُكرر؛ نخزن قائمة)
+  const byCode = new Map();
+  mn.forEach(m => {
+    if (!byCode.has(m.code)) byCode.set(m.code, []);
+    byCode.get(m.code).push(m);
+  });
+
+  const results = [];
+
+  for (const f of fp) {
+    let resG = "ناقص", resR = "ناقص", note = "";
+    let mMatch = null;
+
+    // 1) نحاول مطابقة الكود أولًا
+    const sameCode = byCode.get(f.code) || [];
+
+    // 2) داخل نفس الكود: نتحقق من الاسم (مرن)
+    if (sameCode.length) {
+      // الأفضل: اسم متطابق تمامًا، وإلا الأقرب مرونة
+      mMatch = sameCode.find(m => normalizeArabic(m.name) === normalizeArabic(f.name));
+      if (!mMatch) {
+        mMatch = sameCode
+          .map(m => ({ m, score: namesClose(f.name, m.name, 0.60) ? 1 : 0 }))
+          .filter(x => x.score > 0)
+          .map(x => x.m)[0] || null;
+        if (mMatch && normalizeArabic(mMatch.name) !== normalizeArabic(f.name)) {
+          // ملاحظة التطبيع المرن
+          note = "ⓘ تم اعتماد التطبيع المرن للاسم (الكود متطابق)";
+        }
+      }
+    }
+
+    if (!mMatch) {
+      // لا يوجد في اليدوي بنفس الكود → بيانات ناقصة
+      results.push({
+        code_fp: f.code, name_fp: f.name, g_fp: f.g, r_fp: f.r,
+        code_m: "", name_m: "", g_m: "", r_m: "",
+        res_g: "ناقص", res_r: "ناقص",
+        note: "بيانات ناقصة أو غير موجودة في الكشف اليدوي"
+      });
+      continue;
+    }
+
+    // تقريب مسبق تم في mapRow، نقارن الآن
+    if (f.g === mMatch.g) {
+      resG = "مطابق";
+    } else if (f.g > mMatch.g) {
+      resG = "مخالف";
+      note ||= "يتم التأكد من صحة الادخال اليدوي غ";
+    } else {
+      resG = "مخالف";
+      note ||= `بعد التأكد من الادخال يتم عمل استيفاء غ بالفارق ${(mMatch.g - f.g).toFixed(1)}`;
+    }
+
+    if (f.r === mMatch.r) {
+      resR = "مطابق";
+    } else if (f.r > mMatch.r) {
+      resR = "مخالف";
+      note ||= "يتم التأكد من صحة الادخال اليدوي ر";
+    } else {
+      resR = "مخالف";
+      note ||= `بعد التأكد من الادخال يتم عمل ر بالفارق ${(mMatch.r - f.r).toFixed(1)}`;
+    }
+
+    results.push({
+      code_fp: f.code, name_fp: f.name, g_fp: f.g, r_fp: f.r,
+      code_m: mMatch.code, name_m: mMatch.name, g_m: mMatch.g, r_m: mMatch.r,
+      res_g: resG, res_r: resR,
+      note: note || "مطابق"
+    });
+  }
+
+  // فرز تصاعدي حسب الكود (رقميًا إن أمكن)
+  results.sort((a, b) => Number(a.code_fp) - Number(b.code_fp));
+  return results;
 }
 
-// ====== ربط الأحداث ======
-fpInput?.addEventListener("change", async (e) => {
-  fpRows = await readXlsx(e.target.files[0]);
-});
-manualInput?.addEventListener("change", async (e) => {
-  mnRows = await readXlsx(e.target.files[0]);
+/* =======================
+   Wire events
+======================= */
+
+fpInput.addEventListener('change', async () => {
+  fpData = null;
+  if (fpInput.files && fpInput.files[0]) {
+    fpNameSpan.textContent = fpInput.files[0].name;
+    fpData = await readXlsx(fpInput.files[0]);
+  } else {
+    fpNameSpan.textContent = "— لم يتم اختيار ملف بعد";
+  }
+  updateStartState();
 });
 
-startBtn?.addEventListener("click", () => {
-  if (!fpRows.length || !mnRows.length) {
-    alert("رجاءً اختر ملفي البصمة واليدوي (XLSX) أولاً.");
+manualInput.addEventListener('change', async () => {
+  manualData = null;
+  if (manualInput.files && manualInput.files[0]) {
+    manualNameSpan.textContent = manualInput.files[0].name;
+    manualData = await readXlsx(manualInput.files[0]);
+  } else {
+    manualNameSpan.textContent = "— لم يتم اختيار ملف بعد";
+  }
+  updateStartState();
+});
+
+startBtn.addEventListener('click', () => {
+  if (!(fpData && manualData)) {
+    alert("رجاءً اختر ملفي البصمة واليدوي (XLSX) أولًا.");
     return;
   }
-  rawResults = compareRecords(fpRows, mnRows);
-  results = [...rawResults];
-  renderTable(results);
+  fullResults = compareRecords(fpData, manualData);
+  updateStats();
+  filterResults("all");
 });
 
-downloadBtn?.addEventListener("click", () => {
-  if (!rawResults.length) return;
-  downloadXlsx(results.length ? results : rawResults);
+statAllBtn.addEventListener('click',   () => filterResults("all"));
+statMatchBtn.addEventListener('click', () => filterResults("match"));
+statDiffBtn.addEventListener('click',  () => filterResults("diff"));
+statMissingBtn.addEventListener('click', () => filterResults("missing"));
+
+searchBox.addEventListener('input', () => {
+  // نعيد تطبيق آخر نوع فلترة نشِط لو أردت؛ هنا نعرض كل النتائج مع البحث
+  filterResults("all");
 });
 
-// فلاتر
-filterAll?.addEventListener("click", () => applyFilter("all"));
-filterOk?.addEventListener("click", () => applyFilter("ok"));
-filterBad?.addEventListener("click", () => applyFilter("bad"));
-filterMiss?.addEventListener("click", () => applyFilter("miss"));
+// تنزيل النتائج XLSX
+downloadBtn.addEventListener('click', () => {
+  if (!fullResults.length) return;
 
-// بحث مباشر
-searchInput?.addEventListener("input", applySearch);
+  const rows = fullResults.map((r, i) => ({
+    "م": i + 1,
+    "الكود (بصمة)": r.code_fp,
+    "الاسم (بصمة)": r.name_fp,
+    "غ (بصمة)": r.g_fp,
+    "ر (بصمة)": r.r_fp,
+    "الكود (يدوي)": r.code_m,
+    "الاسم (يدوي)": r.name_m,
+    "غ (يدوي)": r.g_m,
+    "ر (يدوي)": r.r_m,
+    "نتيجة غ": r.res_g,
+    "نتيجة ر": r.res_r,
+    "الملاحظة": r.note
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "نتيجة المطابقة");
+  XLSX.writeFile(wb, "canary_monthly_result.xlsx");
+});
