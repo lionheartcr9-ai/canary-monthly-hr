@@ -1,179 +1,191 @@
-// ✅ دالة لتقريب القيم العشرية بدقة (مثلاً 6.500000625 → 6.5)
-const roundValue = (num) => {
-  if (num === "" || num === null || isNaN(num)) return 0;
-  return Math.round((parseFloat(num) + Number.EPSILON) * 100) / 100;
+/* ===============================
+   أدوات مساعدة
+================================*/
+
+// تقريب دقيق لرقمين عشريّين (يعالج 6.500000625 → 6.5)
+const round2 = (v) => {
+  if (v === "" || v === null || v === undefined) return 0;
+  const n = parseFloat(v);
+  if (Number.isNaN(n)) return 0;
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 };
 
-// ✅ تحميل ملف Excel وإرجاع بياناته كمصفوفة كائنات
-async function readExcel(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: "array" });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(firstSheet);
-      resolve(rows);
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-}
+// مقارنة أرقام مع سماحية عشرية صغيرة (لتمييز 6.5 و 6.500000625 أنهم متساويان)
+const nearlyEqual = (a, b, tol = 0.01) => Math.abs(round2(a) - round2(b)) <= tol;
 
-// ✅ الدالة الرئيسية لمقارنة ملفي البصمة واليدوي
-function compareRecords(fingerprint, manual) {
+// تطبيع نص عربي لإزالة الإشكالات الشائعة (مسافات/تشكيل/ألف-همزات/ياء-ألف مقصورة/هاء-تاء مربوطة…)
+const normalizeArabic = (s = "") =>
+  String(s)
+    .trim()
+    // حذف التشكيل
+    .replace(/[\u064B-\u065F]/g, "")
+    // توحيد الألف بهمزاتها
+    .replace(/[إأآٱ]/g, "ا")
+    // ياء/ألف مقصورة
+    .replace(/ى/g, "ي")
+    // هاء/تاء مربوطة
+    .replace(/ة/g, "ه")
+    // همزة منفردة
+    .replace(/ؤ|ئ/g, "ء")
+    // مسافات مكررة
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+// تطابق مرن للأسماء: مساواة بعد التطبيع أو احتواء أو تشابه بالتوكنات
+const softNameMatch = (a, b) => {
+  const A = normalizeArabic(a);
+  const B = normalizeArabic(b);
+  if (!A || !B) return false;
+  if (A === B) return true;
+  if (A.includes(B) || B.includes(A)) return true;
+
+  // تشابه بالتوكنات (تقاطع الكلمات)
+  const ta = new Set(A.split(" ").filter(Boolean));
+  const tb = new Set(B.split(" ").filter(Boolean));
+  const inter = [...ta].filter((w) => tb.has(w)).length;
+  const union = new Set([...ta, ...tb]).size;
+  const jaccard = inter / (union || 1);
+  return jaccard >= 0.7;
+};
+
+/* ===============================
+   التحضير: فهرسة الكشف اليدوي بالكود
+================================*/
+const indexByCode = (rows) => {
+  const map = new Map();
+  rows.forEach((r) => {
+    const code = String(r["الكود"]).trim();
+    if (!map.has(code)) map.set(code, []);
+    map.get(code).push(r);
+  });
+  return map;
+};
+
+/* ===============================
+   المقارنة الرئيسية (كود ← اسم مرن)
+================================*/
+function compareRecords(fingerprintRows, manualRows) {
+  const manualByCode = indexByCode(manualRows);
   const results = [];
 
-  fingerprint.forEach((f) => {
-    // إيجاد السطر المطابق بالكود والاسم
-    const match = manual.find(
-      (m) => String(m["الكود"]) === String(f["الكود"]) && m["الاسم"] === f["الاسم"]
-    );
+  fingerprintRows.forEach((f) => {
+    const code = String(f["الكود"]).trim();
+    const nameF = String(f["الاسم"] || "").trim();
 
-    // إذا لم يوجد تطابق → بيانات ناقصة
-    if (!match) {
+    // ابحث حسب الكود فقط
+    const manualCandidates = manualByCode.get(code) || [];
+
+    // لا يوجد أي صف بنفس الكود في اليدوي ⇒ بيانات ناقصة
+    if (manualCandidates.length === 0) {
       results.push({
-        الكود: f["الكود"],
-        الاسم: f["الاسم"],
-        "غ (بصمة)": f["غ"],
-        "ر (بصمة)": f["ر"],
+        "م": 0, // سيُعاد ملؤه بعد الترتيب
+        "الكود (بصمة)": code,
+        "الاسم (بصمة)": nameF,
+        "غ (بصمة)": round2(f["غ"]),
+        "ر (بصمة)": round2(f["ر"]),
+        "الكود (يدوي)": "",
+        "الاسم (يدوي)": "",
         "غ (يدوي)": "",
         "ر (يدوي)": "",
         "نتيجة غ": "ناقص",
         "نتيجة ر": "ناقص",
-        الملاحظة: "بيانات ناقصة أو غير موجودة في الكشف اليدوي",
+        "الملاحظة": "بيانات ناقصة",
       });
       return;
     }
 
-    // تقريب القيم لتفادي فروق الكسور العشرية
-    const g_f = roundValue(f["غ"]);
-    const g_m = roundValue(match["غ"]);
-    const r_f = roundValue(f["ر"]);
-    const r_m = roundValue(match["ر"]);
+    // اختر أفضل مرشح بالاسم (إن وُجد) وإلا خذ أول صف للكود
+    let best = manualCandidates[0];
+    let usedSoftMatch = false;
 
-    let resultG = "";
-    let resultR = "";
+    // لو وُجد مرشح يطابق الاسم مرنًا نختاره
+    const bySoft = manualCandidates.find((m) => softNameMatch(nameF, m["الاسم"]));
+    if (bySoft) {
+      best = bySoft;
+      // إن الاسم بعد التطبيع ليس مطابقًا تمامًا للنص الأصلي، أشر بأنه "مرن"
+      usedSoftMatch = normalizeArabic(nameF) !== normalizeArabic(best["الاسم"]);
+    } else if (manualCandidates.length > 1) {
+      // أكثر من صف بنفس الكود والاسم لم يطابق مرنًا: نواصل على أول صف ونشير "مرن"
+      usedSoftMatch = true;
+    }
+
+    // القيم الرقمية (مع التقريب وسماحية)
+    const gF = round2(f["غ"]);
+    const rF = round2(f["ر"]);
+    const gM = round2(best["غ"]);
+    const rM = round2(best["ر"]);
+
+    let resultG = "مطابق";
+    let resultR = "مطابق";
     let note = "";
 
-    // ✅ مقارنة عدد الغياب (غ)
-    if (g_f === g_m) {
-      resultG = "مطابق";
-    } else if (g_f > g_m) {
-      resultG = "مخالف";
-      note = "يتم التأكد من صحة الادخال اليدوي غ";
-    } else if (g_f < g_m) {
-      resultG = "مخالف";
-      note = `بعد التأكد من الادخال يتم عمل استيفاء غ بالفارق ${(g_m - g_f).toFixed(1)}`;
+    // مقارنة غياب (غ)
+    if (!nearlyEqual(gF, gM)) {
+      if (gF > gM) {
+        resultG = "مخالف";
+        note = "يتم التأكد من صحة الادخال اليدوي غ";
+      } else {
+        resultG = "مخالف";
+        const diff = round2(gM - gF);
+        note = `بعد التأكد من الادخال يتم عمل استيفاء غ بالفارق ${diff}`;
+      }
     }
 
-    // ✅ مقارنة عدد الإجازات (ر)
-    if (r_f === r_m) {
-      resultR = "مطابق";
-    } else if (r_f > r_m) {
-      resultR = "مخالف";
-      if (!note) note = "يتم التأكد من صحة الادخال اليدوي ر";
-    } else if (r_f < r_m) {
-      resultR = "مخالف";
-      if (!note) note = `بعد التأكد من الادخال يتم عمل ر بالفارق ${(r_m - r_f).toFixed(1)}`;
+    // مقارنة (ر)
+    if (!nearlyEqual(rF, rM)) {
+      if (resultR === "مطابق") {
+        if (rF > rM) {
+          resultR = "مخالف";
+          if (!note) note = "يتم التأكد من صحة الادخال اليدوي ر";
+        } else {
+          resultR = "مخالف";
+          const diff = round2(rM - rF);
+          if (!note) note = `بعد التأكد من الادخال يتم عمل ر بالفارق ${diff}`;
+        }
+      } else {
+        // موجودة ملاحظة مسبقًا من غ؛ فقط عدّل النتيجة
+        if (rF > rM) resultR = "مخالف";
+        else resultR = "مخالف";
+      }
     }
 
-    // ✅ إضافة النتيجة النهائية
+    // وسم التطبيع المرن (قصير وملاصق لأي ملاحظة موجودة)
+    if (usedSoftMatch) {
+      note = note ? `${note} • مرن` : "مرن";
+    }
+    if (!note) note = "مطابق";
+
     results.push({
-      الكود: f["الكود"],
-      الاسم: f["الاسم"],
-      "غ (بصمة)": g_f,
-      "ر (بصمة)": r_f,
-      "غ (يدوي)": g_m,
-      "ر (يدوي)": r_m,
+      "م": 0, // سيملأ لاحقًا بعد الفرز
+      "الكود (بصمة)": code,
+      "الاسم (بصمة)": nameF,
+      "غ (بصمة)": gF,
+      "ر (بصمة)": rF,
+      "الكود (يدوي)": String(best["الكود"]).trim(),
+      "الاسم (يدوي)": String(best["الاسم"] || "").trim(),
+      "غ (يدوي)": gM,
+      "ر (يدوي)": rM,
       "نتيجة غ": resultG,
       "نتيجة ر": resultR,
-      الملاحظة: note || "مطابق",
+      "الملاحظة": note,
     });
   });
+
+  // فرز تصاعدي بالكود (رقميًا إن أمكن)
+  results.sort((a, b) => {
+    const na = Number(a["الكود (بصمة)"]);
+    const nb = Number(b["الكود (بصمة)"]);
+    if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+    return String(a["الكود (بصمة)"]).localeCompare(String(b["الكود (بصمة)"]));
+  });
+
+  // تعبئة عمود الترقيم "م"
+  results.forEach((row, i) => (row["م"] = i + 1));
 
   return results;
 }
 
-// ✅ عرض النتائج في الجدول داخل الصفحة
-function displayResults(results) {
-  const tableBody = document.getElementById("resultsTable");
-  tableBody.innerHTML = "";
-
-  results.forEach((r) => {
-    const row = document.createElement("tr");
-
-    // ألوان الخلفية حسب النتيجة
-    const colorG =
-      r["نتيجة غ"] === "مطابق" ? "#004d00" : r["نتيجة غ"] === "ناقص" ? "#666600" : "#660000";
-    const colorR =
-      r["نتيجة ر"] === "مطابق" ? "#004d00" : r["نتيجة ر"] === "ناقص" ? "#666600" : "#660000";
-
-    row.innerHTML = `
-      <td>${r["الكود"]}</td>
-      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r["الاسم"]}</td>
-      <td>${r["غ (بصمة)"]}</td>
-      <td>${r["غ (يدوي)"]}</td>
-      <td style="background:${colorG};color:white">${r["نتيجة غ"]}</td>
-      <td>${r["ر (بصمة)"]}</td>
-      <td>${r["ر (يدوي)"]}</td>
-      <td style="background:${colorR};color:white">${r["نتيجة ر"]}</td>
-      <td style="max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r["الملاحظة"]}</td>
-    `;
-    tableBody.appendChild(row);
-  });
-}
-
-// ✅ تصدير النتائج إلى ملف Excel
-function exportToExcel(results) {
-  const worksheet = XLSX.utils.json_to_sheet(results);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "النتائج الشهرية");
-  XLSX.writeFile(workbook, "kanari_monthly_result.xlsx");
-}
-
-// ✅ تحميل الملفات وتشغيل المقارنة
-document.getElementById("compareBtn").addEventListener("click", async () => {
-  const fingerprintFile = document.getElementById("fingerFile").files[0];
-  const manualFile = document.getElementById("manualFile").files[0];
-
-  if (!fingerprintFile || !manualFile) {
-    alert("الرجاء اختيار الملفين أولاً (البصمة واليدوي)");
-    return;
-  }
-
-  const fingerprint = await readExcel(fingerprintFile);
-  const manual = await readExcel(manualFile);
-  const results = compareRecords(fingerprint, manual);
-
-  displayResults(results);
-
-  // حساب الإجماليات
-  const total = results.length;
-  const matching = results.filter((r) => r["نتيجة غ"] === "مطابق" && r["نتيجة ر"] === "مطابق").length;
-  const diff = results.filter(
-    (r) => r["نتيجة غ"] === "مخالف" || r["نتيجة ر"] === "مخالف"
-  ).length;
-  const missing = results.filter(
-    (r) => r["نتيجة غ"] === "ناقص" || r["نتيجة ر"] === "ناقص"
-  ).length;
-
-  document.getElementById("summary").innerHTML = `
-    <b>الإجمالي:</b> ${total} &nbsp; | &nbsp;
-    <b>مطابق:</b> ${matching} &nbsp; | &nbsp;
-    <b>مخالف:</b> ${diff} &nbsp; | &nbsp;
-    <b>ناقص:</b> ${missing}
-  `;
-
-  // حفظ النتيجة العامة لاستخدامها في التصدير
-  window.lastResults = results;
-});
-
-// ✅ زر تصدير النتيجة إلى ملف Excel
-document.getElementById("exportBtn").addEventListener("click", () => {
-  if (!window.lastResults || window.lastResults.length === 0) {
-    alert("لا توجد نتائج لتصديرها، الرجاء إجراء المقارنة أولاً.");
-    return;
-  }
-  exportToExcel(window.lastResults);
-});
+/* ملاحظة:
+   - لا يوجد أي رفض للسطر إذا اختلف الاسم مع تطابق الكود؛ فقط نُشير بـ "مرن".
+   - لو ظهرت ملاحظة أخرى بسبب (غ/ر)، ستظهر بهذا الشكل: "… • مرن".
+*/
