@@ -1,138 +1,72 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>HR — نظام المطابقة الشهرية (XLSX)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>نظام المطابقة الشهرية — HR (XLSX)</title>
 
-<!-- SheetJS for XLSX -->
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- تنسيقاتك الحالية -->
+  <link rel="stylesheet" href="./style.css" />
 
-<style>
-  :root{
-    --bg:#0f172a;           /* خلفية عامة */
-    --panel:#0b1324;        /* بطاقة */
-    --text:#e5e7eb;         /* نص */
-    --muted:#94a3b8;        /* ثانوي */
-    --ok:#14532d;           /* مطابق */
-    --bad:#581c1b;          /* مخالف */
-    --warn:#374151;         /* ناقص */
-    --ok-border:#22c55e33;
-    --bad-border:#ef444433;
-    --warn-border:#9ca3af33;
-    --chip:#111827;
-    --brand:#2dd4bf;
-  }
-  *{box-sizing:border-box}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", "Arial", sans-serif;
-    margin:0; padding:24px 10px 80px;
-  }
-  h1{font-size:22px;margin:0 0 12px;display:flex;gap:8px;align-items:center}
-  .wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
-  .card{
-    background:var(--panel);
-    border:1px solid #1f2937;
-    border-radius:12px; padding:14px;
-  }
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  .hint{color:var(--muted);font-size:12px}
-  .box{
-    border:1px dashed #334155; border-radius:12px; padding:12px;
-    background:#0b1222;
-  }
-  input[type=file]{
-    display:block; width:100%;
-    padding:10px; background:#0a0f1e;border:1px solid #334155;border-radius:10px;color:var(--text)
-  }
-  .btn{
-    background:#0a0f1e;border:1px solid #334155;color:var(--text);
-    padding:10px 14px;border-radius:10px;cursor:pointer
-  }
-  .btn.primary{background:#0b1324;border-color:#1f3a5f}
-  .btn.green{background:#064e3b;border-color:#065f46}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
-  .kpis{display:flex;gap:10px;flex-wrap:wrap}
-  .kpis .chip{
-    background:var(--chip); border:1px solid #334155; color:var(--text);
-    border-radius:999px; padding:8px 12px; font-size:13px; display:flex; gap:8px; align-items:center; cursor:pointer;
-  }
-  .kpis .chip[data-active="true"]{outline:2px solid var(--brand)}
-  .kpis .chip.ok{border-color:var(--ok-border)}
-  .kpis .chip.bad{border-color:var(--bad-border)}
-  .kpis .chip.warn{border-color:var(--warn-border)}
-
-  /* جدول قابل للتمرير داخل إطار ثابت */
-  .table-shell{
-    background:#0a0f1e; border:1px solid #1f2937; border-radius:12px;
-    overflow:auto; /* أفقي وعمودي */
-  }
-  table{min-width:1200px; width:100%; border-collapse:separate; border-spacing:0}
-  th,td{padding:10px 12px; border-bottom:1px solid #1f2937; white-space:nowrap; font-size:14px}
-  th{
-    position:sticky; top:0; background:#0b1324; z-index:1; text-align:center;
-  }
-  td{text-align:center}
-
-  /* ألوان النتائج داخل الشاشة فقط */
-  .tag{padding:6px 10px;border-radius:8px;display:inline-block}
-  .tag.ok{background:var(--ok);border:1px solid var(--ok-border)}
-  .tag.bad{background:var(--bad);border:1px solid var(--bad-border)}
-  .tag.warn{background:var(--warn);border:1px solid var(--warn-border)}
-
-  .footer{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
-  .sticky-actions{display:flex;gap:8px;flex-wrap:wrap}
-
-  @media (max-width:700px){
-    h1{font-size:18px}
-    th,td{font-size:13px; padding:8px}
-  }
-</style>
+  <!-- SheetJS لقراءة/كتابة XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <div class="wrap">
+  <header class="container">
     <h1>🧮 HR — نظام المطابقة الشهرية (XLSX)</h1>
+    <p class="muted">المعالجة تتم محليًا داخل المتصفح — لا يتم رفع أي بيانات للخادم.</p>
+  </header>
 
-    <!-- رفع الملفات -->
-    <div class="card">
-      <div class="row">
-        <div style="flex:1" class="box">
-          <b>📂 ملف البصمة (XLSX)</b>
-          <div class="hint">الأعمدة المطلوبة: <code>الكود | الاسم | غ | ر</code></div>
-          <input id="fp" type="file" accept=".xlsx,.xls" />
-          <div class="hint" id="fpInfo"></div>
-        </div>
-        <div style="flex:1" class="box">
-          <b>📁 الكشف اليدوي (XLSX)</b>
-          <div class="hint">الأعمدة المطلوبة: <code>الكود | الاسم | غ | ر</code></div>
-          <input id="man" type="file" accept=".xlsx,.xls" />
-          <div class="hint" id="manInfo"></div>
-        </div>
+  <main class="container">
+
+    <!-- بطاقتا رفع الملفات -->
+    <section class="grid-2">
+      <!-- الكشف اليدوي -->
+      <div class="card">
+        <h2>📂 الكشف اليدوي <span class="muted">(XLSX)</span></h2>
+        <p class="muted">الأعمدة المطلوبة: <strong>الكود</strong> | <strong>الاسم</strong> | <strong>غ</strong> | <strong>ر</strong></p>
+        <label class="file-btn">
+          اختيار ملف…
+          <input id="manualFile" type="file" accept=".xlsx" />
+        </label>
       </div>
 
-      <div class="row sticky-actions" style="margin-top:10px">
-        <button class="btn primary" id="run" disabled>🚀 بدء المطابقة</button>
-        <button class="btn green" id="dl" disabled>💾 تنزيل النتائج XLSX</button>
-        <div class="hint" id="totals"></div>
+      <!-- ملف البصمة -->
+      <div class="card">
+        <h2>📂 ملف البصمة <span class="muted">(XLSX)</span></h2>
+        <p class="muted">الأعمدة المطلوبة: <strong>الكود</strong> | <strong>الاسم</strong> | <strong>غ</strong> | <strong>ر</strong></p>
+        <label class="file-btn">
+          اختيار ملف…
+          <input id="fpFile" type="file" accept=".xlsx" />
+        </label>
       </div>
-    </div>
+    </section>
 
-    <!-- فلاتر -->
-    <div class="card">
-      <div class="kpis" id="filters">
-        <div class="chip" data-filter="all" data-active="true">الكل <span id="c_all">0</span></div>
-        <div class="chip ok" data-filter="match">مطابق <span id="c_match">0</span></div>
-        <div class="chip bad" data-filter="diff">مخالف <span id="c_diff">0</span></div>
-        <div class="chip warn" data-filter="missing">ناقص/غير مكتمل <span id="c_missing">0</span></div>
-      </div>
-    </div>
+    <!-- أزرار التنفيذ والتصدير -->
+    <section class="actions">
+      <button id="startBtn" class="primary">🚀 بدء المطابقة</button>
+      <button id="downloadBtn" class="success">💾 تنزيل النتائج XLSX</button>
+    </section>
 
-    <!-- التقرير -->
-    <div class="card">
-      <div class="table-shell">
-        <table id="tbl">
+    <!-- الشرائح الإحصائية + الفلاتر -->
+    <section class="chips card">
+      <button id="filter-all"    class="chip">الكل <span id="stat-total">0</span></button>
+      <button id="filter-ok"     class="chip green">مطابق <span id="stat-match">0</span></button>
+      <button id="filter-bad"    class="chip red">مخالف <span id="stat-mismatch">0</span></button>
+      <button id="filter-miss"   class="chip gray">ناقص/غير مكتمل <span id="stat-missing">0</span></button>
+    </section>
+
+    <!-- شريط البحث -->
+    <section class="card" style="margin-top: 12px;">
+      <label for="search" class="muted">🔎 بحث بالاسم أو الكود… مثال: 1145 أو عثمان</label>
+      <input id="search" type="text" placeholder="ابحث بالاسم أو الكود…" dir="rtl" />
+    </section>
+
+    <!-- جدول التقرير -->
+    <section class="card table-wrap">
+      <h2>التقرير</h2>
+      <div class="table-scroll">
+        <table class="table">
           <thead>
             <tr>
               <th>م</th>
@@ -149,240 +83,17 @@
               <th>الملاحظة</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="result-body"></tbody>
         </table>
       </div>
-      <div class="footer">نظام المطابقة الشهري الذكي للموارد البشرية - اليمن • إعداد المهندس/ حمدي العريقي ت: 7773143600 • جميع الحقوق محفوظة نوفمبر 2025م</div>
-    </div>
-  </div>
+    </section>
 
-<script>
-/* -------------------- أدوات مساعدة -------------------- */
-// قراءة ورقة أولى ككائنات
-function readXLSX(file){
-  return new Promise((resolve,reject)=>{
-    const reader = new FileReader();
-    reader.onload = e=>{
-      const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array',cellDates:true});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(ws, {defval:""});
-      resolve(json);
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
-}
+    <footer class="muted center" style="margin: 24px 0;">
+      نظام المطابقة الشهري الذكي للموارد البشرية — اليمن • إعداد: المهندس/ حمدي العريقي • ت: 7773143600 • جميع الحقوق محفوظة نوڤمبر 2025م
+    </footer>
+  </main>
 
-// تقريب آمن لمرتين عشريتين
-const round2 = (val)=>{
-  if(val===null || val===undefined || val==="") return 0;
-  const n = parseFloat(String(val).toString().replace(/,/g,""));
-  if(isNaN(n)) return 0;
-  return Math.round((n + Number.EPSILON)*100)/100;
-};
-
-// تطبيع الاسم (إزالة مسافات زائدة)
-const normName = s => String(s||"").replace(/\s+/g," ").trim();
-
-// مفتاح المطابقة: الكود + الاسم
-const keyOf = r => `${String(r["الكود"]).trim()}__${normName(r["الاسم"])}`;
-
-/* -------------------- الحالة العامة -------------------- */
-let FP=[], MAN=[], RESULT=[], FILTER="all";
-
-/* -------------------- عناصر DOM -------------------- */
-const $ = sel => document.querySelector(sel);
-const fpEl = $("#fp"), manEl = $("#man"), runEl = $("#run"), dlEl = $("#dl");
-const fpInfo = $("#fpInfo"), manInfo = $("#manInfo"), totals = $("#totals");
-const tbody = $("#tbl tbody");
-
-/* -------------------- تحميل الملفات -------------------- */
-async function handleFile(ev, target){
-  const f = ev.target.files[0];
-  if(!f) return;
-  const rows = await readXLSX(f);
-
-  // تأكيد الأعمدة
-  const need = ["الكود","الاسم","غ","ر"];
-  const hasAll = need.every(c=>Object.keys(rows[0]||{}).includes(c));
-  if(!hasAll){ alert("تنبيه: يجب أن تحتوي الورقة على الأعمدة: الكود | الاسم | غ | ر"); ev.target.value=""; return; }
-
-  // تطبيع وتحويل أرقام
-  rows.forEach(r=>{
-    r["الكود"] = String(r["الكود"]).trim();  // يدعم أكواد طويلة مثل 50465
-    r["الاسم"] = normName(r["الاسم"]);
-    r["غ"] = round2(r["غ"]);
-    r["ر"] = round2(r["ر"]);
-  });
-
-  if(target==="fp"){ FP = rows; fpInfo.textContent = `تم رفع: ${f.name} — ${rows.length} صفًا`; }
-  else { MAN = rows; manInfo.textContent = `تم رفع: ${f.name} — ${rows.length} صفًا`; }
-
-  runEl.disabled = !(FP.length && MAN.length);
-  dlEl.disabled = true;
-  RESULT = []; render([], true);
-}
-
-fpEl.addEventListener("change", e=>handleFile(e,"fp"));
-manEl.addEventListener("change", e=>handleFile(e,"man"));
-
-/* -------------------- المطابقة -------------------- */
-function compare(){
-  const mapMan = new Map();
-  MAN.forEach(m=> mapMan.set(keyOf(m), m));
-
-  const out = [];
-
-  FP.forEach(f=>{
-    const k = keyOf(f);
-    const m = mapMan.get(k);
-
-    if(!m){
-      out.push({
-        idx: 0,
-        "الكود (بصمة)": f["الكود"], "الاسم (بصمة)": f["الاسم"],
-        "غ (بصمة)": f["غ"], "ر (بصمة)": f["ر"],
-        "الكود (يدوي)": "", "الاسم (يدوي)": "",
-        "غ (يدوي)": "", "ر (يدوي)": "",
-        "نتيجة غ": "ناقص", "نتيجة ر": "ناقص",
-        "الملاحظة": "بيانات ناقصة أو غير موجودة في الكشف اليدوي",
-        _state: "missing"
-      });
-      return;
-    }
-
-    const gF = round2(f["غ"]), gM = round2(m["غ"]);
-    const rF = round2(f["ر"]), rM = round2(m["ر"]);
-
-    let resG = "مطابق", resR = "مطابق", note = "مطابق", state="match";
-
-    if(gF !== gM){
-      resG = "مخالف";
-      state = "diff";
-      if(gF > gM) note = "يتم التأكد من صحة الادخال اليدوي غ";
-      else note = `بعد التأكد من الادخال يتم عمل استيفاء غ بالفارق ${(gM-gF).toFixed(1)}`;
-    }
-    if(rF !== rM){
-      resR = "مخالف";
-      state = "diff";
-      if(rF > rM) note = (note==="مطابق") ? "يتم التأكد من صحة الادخال اليدوي ر" : note;
-      else note = (note==="مطابق") ? `بعد التأكد من الادخال يتم عمل ر بالفارق ${(rM-rF).toFixed(1)}` : note;
-    }
-
-    out.push({
-      idx: 0,
-      "الكود (بصمة)": f["الكود"], "الاسم (بصمة)": f["الاسم"],
-      "غ (بصمة)": gF, "ر (بصمة)": rF,
-      "الكود (يدوي)": m["الكود"], "الاسم (يدوي)": m["الاسم"],
-      "غ (يدوي)": gM, "ر (يدوي)": rM,
-      "نتيجة غ": resG, "نتيجة ر": resR,
-      "الملاحظة": note,
-      _state: state
-    });
-  });
-
-  // ترتيب حسب الكود تصاعديًا
-  out.sort((a,b)=> Number(a["الكود (بصمة)"]) - Number(b["الكود (بصمة)"]));
-
-  // ترقيم عمود م
-  out.forEach((r,i)=> r.idx = i+1);
-
-  return out;
-}
-
-/* -------------------- عرض الجدول -------------------- */
-function render(rows, clearCounters){
-  tbody.innerHTML = "";
-  const fragment = document.createDocumentFragment();
-
-  let all=0, match=0, diff=0, missing=0;
-
-  (rows||[]).forEach(r=>{
-    all++;
-    if(r._state==="match") match++;
-    else if(r._state==="diff") diff++;
-    else missing++;
-
-    // فلترة
-    if(FILTER==="match" && r._state!=="match") return;
-    if(FILTER==="diff" && r._state!=="diff") return;
-    if(FILTER==="missing" && r._state!=="missing") return;
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${r.idx}</td>
-      <td>${r["الكود (بصمة)"]}</td>
-      <td style="text-align:right">${r["الاسم (بصمة)"]}</td>
-      <td>${r["غ (بصمة)"]}</td>
-      <td>${r["ر (بصمة)"]}</td>
-      <td>${r["الكود (يدوي)"]||""}</td>
-      <td style="text-align:right">${r["الاسم (يدوي)"]||""}</td>
-      <td>${r["غ (يدوي)"]===""?"":r["غ (يدوي)"]}</td>
-      <td>${r["ر (يدوي)"]===""?"":r["ر (يدوي)"]}</td>
-      <td><span class="tag ${r["نتيجة غ"]==="مطابق"?"ok":(r["نتيجة غ"]==="مخالف"?"bad":"warn")}">${r["نتيجة غ"]}</span></td>
-      <td><span class="tag ${r["نتيجة ر"]==="مطابق"?"ok":(r["نتيجة ر"]==="مخالف"?"bad":"warn")}">${r["نتيجة ر"]}</span></td>
-      <td style="text-align:right">${r["الملاحظة"]||""}</td>
-    `;
-    fragment.appendChild(tr);
-  });
-
-  tbody.appendChild(fragment);
-
-  if(clearCounters!==false){
-    $("#c_all").textContent = all;
-    $("#c_match").textContent = match;
-    $("#c_diff").textContent = diff;
-    $("#c_missing").textContent = missing;
-    totals.textContent = `الإجمالي: ${all} | مطابق: ${match} | مخالف: ${diff} | ناقص: ${missing} — ملاحظة: كل المعالجة تتم محليًا داخل المتصفح.`;
-  }
-}
-
-/* -------------------- أزرار التحكم -------------------- */
-runEl.addEventListener("click", ()=>{
-  RESULT = compare();
-  render(RESULT);
-  dlEl.disabled = RESULT.length===0;
-});
-
-// فلاتر
-document.getElementById("filters").addEventListener("click",(e)=>{
-  const chip = e.target.closest(".chip");
-  if(!chip) return;
-  document.querySelectorAll(".chip").forEach(c=>c.dataset.active="false");
-  chip.dataset.active="true";
-  FILTER = chip.dataset.filter || "all";
-  render(RESULT, false);
-});
-
-// تنزيل XLSX
-dlEl.addEventListener("click", ()=>{
-  if(!RESULT.length) return;
-
-  // تجهيز صفوف للملف بنفس ترتيب الأعمدة
-  const rows = RESULT.map(r=>({
-    "م": r.idx,
-    "الكود (بصمة)": r["الكود (بصمة)"],
-    "الاسم (بصمة)": r["الاسم (بصمة)"],
-    "غ (بصمة)": r["غ (بصمة)"],
-    "ر (بصمة)": r["ر (بصمة)"],
-    "الكود (يدوي)": r["الكود (يدوي)"],
-    "الاسم (يدوي)": r["الاسم (يدوي)"],
-    "غ (يدوي)": r["غ (يدوي)"],
-    "ر (يدوي)": r["ر (يدوي)"],
-    "نتيجة غ": r["نتيجة غ"],
-    "نتيجة ر": r["نتيجة ر"],
-    "الملاحظة": r["الملاحظة"]
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(rows, {header:[
-    "م","الكود (بصمة)","الاسم (بصمة)","غ (بصمة)","ر (بصمة)",
-    "الكود (يدوي)","الاسم (يدوي)","غ (يدوي)","ر (يدوي)",
-    "نتيجة غ","نتيجة ر","الملاحظة"
-  ]});
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "canary_monthly_result");
-  XLSX.writeFile(wb, "canary_monthly_result.xlsx");
-});
-</script>
+  <!-- منطق التطبيق -->
+  <script src="./script.js"></script>
 </body>
 </html>
