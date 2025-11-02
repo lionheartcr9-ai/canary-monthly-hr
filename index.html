@@ -3,84 +3,316 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>HR — نظام المطابقة الشهرية (XLSX)</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- مكتبة قراءة الاكسل (SheetJS) -->
-  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <!-- شيفرة التطبيق -->
-  <script defer src="script.js"></script>
+  <title>Canary HR – نظام المطابقة الشهرية</title>
+
+  <!-- ثيم أزرق بسيط -->
+  <style>
+    :root{
+      --bg:#0f1a22; --card:#12212b; --text:#eaf2f6; --muted:#a9c0cc;
+      --line:#234252; --btn:#0c2733; --ok:#1f7a4d; --bad:#7a1f2a; --miss:#666a72;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:var(--bg); color:var(--text); font-family:"Tajawal",system-ui,-apple-system,Segoe UI,Arial}
+    .top{padding:16px 20px; border-bottom:1px solid var(--line)}
+    .title{margin:0; font-size:20px; line-height:1.4}
+    .sub{color:var(--muted); font-size:14px}
+    .wrap{max-width:1100px; margin:22px auto; padding:0 14px}
+    .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px}
+    .card h2{margin:0 0 10px; font-size:18px}
+    .grid{display:grid; gap:12px}
+    .grid.cols-2{grid-template-columns:1fr 1fr}
+    .field{display:flex; flex-direction:column; gap:6px}
+    .label{font-size:14px; color:var(--muted)}
+    input[type="file"]{padding:10px; border:1px dashed var(--line); border-radius:10px; background:#0b1f28; color:var(--text)}
+    .actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .btn{padding:10px 14px; border:1px solid var(--line); background:var(--btn); color:var(--text); border-radius:10px; cursor:pointer}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    .sum{margin-top:4px; color:var(--muted)}
+    .note{color:var(--muted); font-size:13px}
+
+    /* جدول النتائج */
+    .table-wrap{overflow:auto; border:1px solid var(--line); border-radius:12px}
+    table{width:max-content; min-width:100%; border-collapse:separate; border-spacing:0}
+    thead th{position:sticky; top:0; background:#0e1b22; padding:10px 8px; border-bottom:1px solid var(--line); white-space:nowrap; text-align:center}
+    tbody td{padding:10px 8px; border-bottom:1px solid var(--line); text-align:center}
+    td.name{min-width:220px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    td.note{min-width:320px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+    td.res-ok   { background:rgba(31,122,77,.28); }
+    td.res-bad  { background:rgba(122,31,42,.28); }
+    td.res-miss { background:rgba(102,106,114,.28); }
+
+    .foot{padding:16px 10px; text-align:center; color:var(--muted); border-top:1px solid var(--line); margin-top:18px; line-height:1.9}
+    @media (max-width:700px){
+      .grid.cols-2{grid-template-columns:1fr}
+      td.name{min-width:260px}
+      td.note{min-width:360px}
+    }
+  </style>
+
+  <!-- مكتبة Excel (XLSX) من CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+
   <header class="top">
-    <h1>🧮 HR — نظام المطابقة الشهرية (XLSX)</h1>
+    <h1 class="title">ألوان الكناري للصناعات الغذائية HR — نظام المطابقة الشهرية</h1>
+    <div class="sub">مطابقة البصمة (غ/ر) مع التحضير اليدوي بدقة عالية</div>
   </header>
 
   <main class="wrap">
-    <!-- رفع ملف البصمة -->
+    <!-- رفع الملفات -->
     <section class="card">
-      <h2>📁 ملف البصمة (XLSX)</h2>
-      <div class="uploader">
-        <input id="bioFile" type="file" accept=".xlsx" />
-        <small id="bioHint" class="hint">اختر ملف البصمة بصيغة .xlsx…</small>
-      </div>
-    </section>
-
-    <!-- رفع الملف اليدوي -->
-    <section class="card">
-      <h2>📁 الكشف اليدوي (XLSX)</h2>
-      <div class="uploader">
-        <input id="manFile" type="file" accept=".xlsx" />
-        <small id="manHint" class="hint">اختر ملف الكشف اليدوي بصيغة .xlsx…</small>
-      </div>
-    </section>
-
-    <!-- أدوات -->
-    <section class="card">
-      <div class="tools">
-        <div class="stats">
-          <div class="pill all"    id="cAll">0 إجمالي</div>
-          <div class="pill ok"     id="cOk">0 مطابق</div>
-          <div class="pill bad"    id="cBad">0 مخالف</div>
-          <div class="pill miss"   id="cMiss">0 ناقص/غير مكتمل</div>
+      <h2>تحميل الملفات (XLSX)</h2>
+      <div class="grid cols-2">
+        <div class="field">
+          <label class="label">📂 ملف البصمة (XLSX) — الأعمدة: الكود | الاسم | غ | ر</label>
+          <input id="fingerFile" type="file" accept=".xlsx" />
         </div>
-        <input id="q" class="search" placeholder="🔎 بحث بالاسم أو الكود… مثال: 1041 أو نادر رشاد" />
-        <button id="btnExport" class="btn" disabled>🧾 تصدير النتيجة (XLSX)</button>
+        <div class="field">
+          <label class="label">📂 الكشف اليدوي (XLSX) — الأعمدة: الكود | الاسم | غ | ر</label>
+          <input id="manualFile" type="file" accept=".xlsx" />
+        </div>
       </div>
-      <p class="note">المطابقة تشترط تطابق <b>الكود</b> و<b>الاسم</b> بين الملفين ثم تتم مقارنة الحالتين (غ/ر).</p>
+      <div class="actions" style="margin-top:10px">
+        <button id="compareBtn" class="btn">🚀 بدء المطابقة</button>
+        <button id="exportBtn" class="btn" disabled>💾 تنزيل النتائج XLSX</button>
+        <span id="summary" class="sum"></span>
+      </div>
+      <div class="note">ملاحظة: لا يتم رفع أي بيانات للخادم — كل المعالجة تتم محليًا داخل المتصفح.</div>
     </section>
 
-    <!-- جدول النتائج (قابل للتمرير أفقياً على الجوال) -->
+    <!-- جدول النتائج -->
     <section class="card">
+      <h2>التقرير</h2>
       <div class="table-wrap">
-        <table id="tbl">
+        <table>
           <thead>
             <tr>
-              <th>م</th>
-              <th>الكود (بصمة)</th>
-              <th class="wide">الاسم (بصمة)</th>
+              <th>الكود</th>
+              <th>الاسم</th>
               <th>غ (بصمة)</th>
-              <th>ر (بصمة)</th>
-
-              <th>الكود (يدوي)</th>
-              <th class="wide">الاسم (يدوي)</th>
               <th>غ (يدوي)</th>
-              <th>ر (يدوي)</th>
-
               <th>نتيجة غ</th>
+              <th>ر (بصمة)</th>
+              <th>ر (يدوي)</th>
               <th>نتيجة ر</th>
-              <th class="wider">الملاحظة</th>
+              <th>الملاحظة</th>
             </tr>
           </thead>
-          <tbody id="tbody"></tbody>
+          <tbody id="resultsTable"></tbody>
         </table>
       </div>
     </section>
   </main>
 
   <footer class="foot">
-    <div>نظام المطابقة الشهري الذكي للموارد البشرية - اليمن</div>
-    <div>إعداد المهندس/ حمدي العريقي ت: 7773143600</div>
-    <div>جميع الحقوق محفوظة نوفمبر 2025م</div>
+    نظام المطابقة الشهري الذكي للموارد البشرية - اليمن<br/>
+    إعداد المهندس/ حمدي العريقي ت: 7773143600<br/>
+    جميع الحقوق محفوظة نوفمبر 2025م
   </footer>
+
+  <!-- سكربت التطبيق -->
+  <script>
+    // ✅ دالة لتقريب القيم العشرية بدقة (مثلاً 6.500000625 → 6.5)
+    const roundValue = (num) => {
+      if (num === "" || num === null || isNaN(num)) return 0;
+      return Math.round((parseFloat(num) + Number.EPSILON) * 100) / 100;
+    };
+
+    // ✅ تحميل ملف Excel وإرجاع بياناته كمصفوفة كائنات
+    async function readExcel(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try{
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(firstSheet, { defval:"" });
+            // تحقّق من الأعمدة المطلوبة
+            const required = ["الكود","الاسم","غ","ر"];
+            const header = rows.length ? Object.keys(rows[0]) : [];
+            const ok = required.every(k => header.includes(k));
+            if(!ok) throw new Error("يجب أن تكون عناوين الأعمدة: الكود | الاسم | غ | ر");
+            resolve(rows);
+          }catch(err){ reject(err); }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    // ✅ الدالة الرئيسية لمقارنة ملفي البصمة واليدوي
+    function compareRecords(fingerprint, manual) {
+      const results = [];
+
+      fingerprint.forEach((f) => {
+        // إيجاد السطر المطابق بالكود والاسم
+        const match = manual.find(
+          (m) => String(m["الكود"]) === String(f["الكود"]) && m["الاسم"] === f["الاسم"]
+        );
+
+        // إذا لم يوجد تطابق → بيانات ناقصة
+        if (!match) {
+          results.push({
+            الكود: f["الكود"],
+            الاسم: f["الاسم"],
+            "غ (بصمة)": f["غ"],
+            "ر (بصمة)": f["ر"],
+            "غ (يدوي)": "",
+            "ر (يدوي)": "",
+            "نتيجة غ": "ناقص",
+            "نتيجة ر": "ناقص",
+            الملاحظة: "بيانات ناقصة أو غير موجودة في الكشف اليدوي",
+          });
+          return;
+        }
+
+        // تقريب القيم لتفادي فروق الكسور العشرية
+        const g_f = roundValue(f["غ"]);
+        const g_m = roundValue(match["غ"]);
+        const r_f = roundValue(f["ر"]);
+        const r_m = roundValue(match["ر"]);
+
+        let resultG = "";
+        let resultR = "";
+        let note = "";
+
+        // ✅ مقارنة عدد الغياب (غ)
+        if (g_f === g_m) {
+          resultG = "مطابق";
+        } else if (g_f > g_m) {
+          resultG = "مخالف";
+          note = "يتم التأكد من صحة الادخال اليدوي غ";
+        } else if (g_f < g_m) {
+          resultG = "مخالف";
+          note = `بعد التأكد من الادخال يتم عمل استيفاء غ بالفارق ${(g_m - g_f).toFixed(1)}`;
+        }
+
+        // ✅ مقارنة عدد الإجازات (ر)
+        if (r_f === r_m) {
+          resultR = "مطابق";
+        } else if (r_f > r_m) {
+          resultR = "مخالف";
+          if (!note) note = "يتم التأكد من صحة الادخال اليدوي ر";
+        } else if (r_f < r_m) {
+          resultR = "مخالف";
+          if (!note) note = `بعد التأكد من الادخال يتم عمل ر بالفارق ${(r_m - r_f).toFixed(1)}`;
+        }
+
+        // ✅ إضافة النتيجة النهائية
+        results.push({
+          الكود: f["الكود"],
+          الاسم: f["الاسم"],
+          "غ (بصمة)": g_f,
+          "ر (بصمة)": r_f,
+          "غ (يدوي)": g_m,
+          "ر (يدوي)": r_m,
+          "نتيجة غ": resultG,
+          "نتيجة ر": resultR,
+          الملاحظة: note || "مطابق",
+        });
+      });
+
+      // فرز تصاعدي حسب الكود (كأرقام إن أمكن)
+      results.sort((a,b)=>{
+        const x = Number(a["الكود"]) || 0;
+        const y = Number(b["الكود"]) || 0;
+        return x - y;
+      });
+
+      return results;
+    }
+
+    // ✅ عرض النتائج في الجدول داخل الصفحة
+    function displayResults(results) {
+      const tableBody = document.getElementById("resultsTable");
+      tableBody.innerHTML = "";
+
+      results.forEach((r) => {
+        const row = document.createElement("tr");
+
+        const clsG = r["نتيجة غ"] === "مطابق" ? "res-ok" : (r["نتيجة غ"] === "ناقص" ? "res-miss" : "res-bad");
+        const clsR = r["نتيجة ر"] === "مطابق" ? "res-ok" : (r["نتيجة ر"] === "ناقص" ? "res-miss" : "res-bad");
+
+        row.innerHTML = `
+          <td>${r["الكود"]}</td>
+          <td class="name" title="${r["الاسم"]}">${r["الاسم"]}</td>
+          <td>${r["غ (بصمة)"]}</td>
+          <td>${r["غ (يدوي)"]}</td>
+          <td class="${clsG}">${r["نتيجة غ"]}</td>
+          <td>${r["ر (بصمة)"]}</td>
+          <td>${r["ر (يدوي)"]}</td>
+          <td class="${clsR}">${r["نتيجة ر"]}</td>
+          <td class="note" title="${r["الملاحظة"]}">${r["الملاحظة"]}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // ✅ تصدير النتائج إلى ملف Excel
+    function exportToExcel(results) {
+      // ترتيب الأعمدة يدويًا لضمان نفس الترتيب في الملف
+      const ordered = results.map(r => ({
+        "الكود": r["الكود"],
+        "الاسم": r["الاسم"],
+        "غ (بصمة)": r["غ (بصمة)"],
+        "ر (بصمة)": r["ر (بصمة)"],
+        "غ (يدوي)": r["غ (يدوي)"],
+        "ر (يدوي)": r["ر (يدوي)"],
+        "نتيجة غ": r["نتيجة غ"],
+        "نتيجة ر": r["نتيجة ر"],
+        "الملاحظة": r["الملاحظة"]
+      }));
+      const ws = XLSX.utils.json_to_sheet(ordered, { cellDates:false });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "النتائج الشهرية");
+      XLSX.writeFile(wb, "canary_monthly_result.xlsx");
+    }
+
+    // ✅ تحميل الملفات وتشغيل المقارنة
+    document.getElementById("compareBtn").addEventListener("click", async () => {
+      const fingerprintFile = document.getElementById("fingerFile").files[0];
+      const manualFile = document.getElementById("manualFile").files[0];
+
+      if (!fingerprintFile || !manualFile) {
+        alert("الرجاء اختيار الملفين أولاً (البصمة واليدوي) — بصيغة XLSX وبعناوين الأعمدة: الكود | الاسم | غ | ر");
+        return;
+      }
+
+      try{
+        const fingerprint = await readExcel(fingerprintFile);
+        const manual = await readExcel(manualFile);
+        const results = compareRecords(fingerprint, manual);
+
+        displayResults(results);
+
+        // حساب الإجماليات
+        const total = results.length;
+        const matching = results.filter((r) => r["نتيجة غ"] === "مطابق" && r["نتيجة ر"] === "مطابق").length;
+        const diff = results.filter((r) => r["نتيجة غ"] === "مخالف" || r["نتيجة ر"] === "مخالف").length;
+        const missing = results.filter((r) => r["نتيجة غ"] === "ناقص" || r["نتيجة ر"] === "ناقص").length;
+
+        document.getElementById("summary").innerHTML =
+          `<b>الإجمالي:</b> ${total} &nbsp; | &nbsp; <b>مطابق:</b> ${matching} &nbsp; | &nbsp; <b>مخالف:</b> ${diff} &nbsp; | &nbsp; <b>ناقص:</b> ${missing}`;
+
+        // حفظ النتيجة العامة لاستخدامها في التصدير
+        window.lastResults = results;
+        document.getElementById("exportBtn").disabled = results.length === 0;
+      }catch(err){
+        alert("حدث خطأ أثناء قراءة الملفات: " + err.message);
+      }
+    });
+
+    // ✅ زر تصدير النتيجة إلى ملف Excel
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      if (!window.lastResults || window.lastResults.length === 0) {
+        alert("لا توجد نتائج لتصديرها، الرجاء إجراء المطابقة أولاً.");
+        return;
+      }
+      exportToExcel(window.lastResults);
+    });
+  </script>
 </body>
 </html>
