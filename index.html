@@ -7,6 +7,27 @@
   <link rel="stylesheet" href="style.css" />
   <!-- SheetJS -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- ستايلات خفيفة للزر/الألوان (لا تغيّر style.css) -->
+  <style>
+    /* إخفاء زر الملف الأصلي والاعتماد على اللِيبِل */
+    input[type="file"].hidden-file{display:none}
+    .btn{padding:.6rem 1rem;border-radius:.6rem;background:#0ea5e9;color:#fff;border:none;cursor:pointer}
+    .btn.primary{background:#22c55e}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .file-name{margin-inline-start:.75rem;opacity:.8}
+    .badges{display:flex;gap:.5rem;flex-wrap:wrap}
+    .chip{padding:.45rem .8rem;border-radius:999px;border:1px solid #334155;background:#0b1220;color:#e2e8f0}
+    .search input{width:100%;padding:.6rem .8rem;border-radius:.6rem;border:1px solid #334155;background:#0b1220;color:#e2e8f0}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:.55rem .6rem;border-bottom:1px solid #1f2937;white-space:nowrap}
+    thead th{position:sticky;top:0;background:#0f172a;z-index:1}
+    /* تلوين نتيجتي غ/ر */
+    .status-match{background:#064e3b;color:#e7fee7}
+    .status-diff{background:#3f1d20;color:#ffe4e6}
+    .status-missing{background:#1f2937;color:#cbd5e1}
+  </style>
 </head>
 <body>
   <main class="container">
@@ -15,35 +36,35 @@
       <p class="muted">المعالجة تتم محليًا داخل المتصفح — لا يتم رفع أي بيانات للخادم.</p>
     </header>
 
-    <!-- ملف البصمة -->
+    <!-- ملف البصمة أولا -->
     <section class="card">
       <h3>📁 ملف البصمة (XLSX)</h3>
       <p class="hint">الأعمدة المطلوبة: <b>الكود | الاسم | غ | ر</b></p>
       <div class="uploader">
-        <input type="file" id="fpFile" accept=".xlsx" />
+        <input class="hidden-file" type="file" id="fpFile" accept=".xlsx">
         <label for="fpFile" class="btn">اختيار ملف…</label>
         <span id="fpName" class="file-name">— لم يتم اختيار ملف بعد</span>
       </div>
     </section>
 
-    <!-- الكشف اليدوي -->
+    <!-- الكشف اليدوي ثانيا -->
     <section class="card">
       <h3>📁 الكشف اليدوي (XLSX)</h3>
       <p class="hint">الأعمدة المطلوبة: <b>الكود | الاسم | غ | ر</b></p>
       <div class="uploader">
-        <input type="file" id="manualFile" accept=".xlsx" />
+        <input class="hidden-file" type="file" id="manualFile" accept=".xlsx">
         <label for="manualFile" class="btn">اختيار ملف…</label>
         <span id="manualName" class="file-name">— لم يتم اختيار ملف بعد</span>
       </div>
     </section>
 
-    <!-- أزرار التحكم -->
+    <!-- أكشن -->
     <section class="card actions">
       <button id="startCompare" class="btn primary" disabled>🚀 بدء المطابقة</button>
       <button id="downloadXlsx" class="btn" disabled>💾 تنزيل النتائج XLSX</button>
     </section>
 
-    <!-- عدادات وفلترة -->
+    <!-- عدادات + بحث -->
     <section class="card stats">
       <div class="badges">
         <button class="chip" data-filter="all" id="statAll">الكل 0</button>
@@ -51,7 +72,7 @@
         <button class="chip" data-filter="diff" id="statDiff">مخالف 0</button>
         <button class="chip" data-filter="missing" id="statMissing">ناقص/غير مكتمل 0</button>
       </div>
-      <div class="search">
+      <div class="search" style="margin-top:.6rem">
         <input id="searchBox" type="text" placeholder="🔎 ابحث بالاسم أو الكود…" />
       </div>
     </section>
@@ -82,7 +103,7 @@
       </div>
     </section>
 
-    <footer class="page-foot">
+    <footer class="page-foot" style="margin:.8rem 0 2rem">
       <small>
         نظام المطابقة الشهري الذكي للموارد البشرية - اليمن • إعداد المهندس/ حمدي العريقي ت: 7773143600 • جميع الحقوق محفوظة نوفمبر 2025م
       </small>
