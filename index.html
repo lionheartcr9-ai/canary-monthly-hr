@@ -1,460 +1,115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HR — نظام المطابقة الشهرية (XLSX) | محلي</title>
+  <title>HR — نظام المطابقة الشهرية (XLSX)</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <!-- نمط واجهة بسيط واحترافي -->
+  <!-- ستايلات خفيفة للزر/الألوان (لا تغيّر style.css) -->
   <style>
-    :root{
-      --bg:#0f172a;        /* slate-900 */
-      --panel:#111827;     /* gray-900 */
-      --card:#0b1220;      /* custom dark */
-      --text:#e5e7eb;      /* gray-200 */
-      --muted:#9ca3af;     /* gray-400 */
-      --brand:#22c55e;     /* green-500 */
-      --danger:#f87171;    /* red-400 */
-      --warn:#f59e0b;      /* amber-500 */
-      --chip:#1f2937;      /* gray-800 */
-      --line:#1f2937;
-      --ok:#16a34a; --bad:#b91c1c; --miss:#475569; /* states */
-      --accent:#06b6d4;    /* cyan-500 */
-      --btn:#1e293b;       /* slate-800 */
-      --ring:#22d3ee;      /* cyan-400 */
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; background:var(--bg); color:var(--text);
-      font:15px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Naskh Arabic", "Tahoma", Arial, sans-serif;
-    }
-    .wrap{max-width:980px;margin:24px auto;padding:0 14px}
-    h1{font-size:28px;margin:0 0 8px}
-    .subtitle{color:var(--muted);margin-bottom:22px}
-    .card{
-      background:linear-gradient(180deg, var(--card), var(--panel));
-      border:1px solid var(--line); border-radius:14px; padding:18px; margin:14px 0;
-      box-shadow:0 10px 30px rgba(0,0,0,.25);
-    }
-    .row{display:flex;gap:12px;flex-wrap:wrap}
-    .col{flex:1 1 320px}
-    label.h{display:block;font-weight:700;margin:2px 0 8px}
-    .hint{color:var(--muted);font-size:13px;margin-top:6px}
-    input[type="file"]{
-      width:100%; background:var(--btn); color:var(--text); border:1px dashed #2b3344;
-      padding:12px; border-radius:10px; cursor:pointer;
-    }
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-    .btn{
-      border:none; padding:12px 16px; border-radius:12px; cursor:pointer; font-weight:700;
-      background:var(--btn); color:var(--text); border:1px solid #263042;
-    }
-    .btn.primary{background:var(--brand); border-color:var(--brand); color:#04210f}
-    .btn.secondary{background:#0b3750;border-color:#0b3750}
+    /* إخفاء زر الملف الأصلي والاعتماد على اللِيبِل */
+    input[type="file"].hidden-file{display:none}
+    .btn{padding:.6rem 1rem;border-radius:.6rem;background:#0ea5e9;color:#fff;border:none;cursor:pointer}
+    .btn.primary{background:#22c55e}
     .btn:disabled{opacity:.5;cursor:not-allowed}
-    .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 6px}
-    .chip{
-      background:var(--chip); color:var(--text); padding:8px 12px; border-radius:999px;
-      border:1px solid #2a3344; cursor:pointer; user-select:none; font-weight:700;
-    }
-    .chip.active{outline:2px solid var(--ring)}
-    .chip.ok{background:rgba(22,163,74,.12); color:#86efac; border-color:rgba(22,163,74,.3)}
-    .chip.bad{background:rgba(185,28,28,.12); color:#fecaca; border-color:rgba(185,28,28,.3)}
-    .chip.miss{background:rgba(71,85,105,.25); color:#cbd5e1; border-color:rgba(71,85,105,.4)}
-    .search{position:relative;margin:8px 0 14px}
-    .search input{
-      width:100%; padding:12px 42px 12px 12px; border-radius:12px; background:#0b1220; color:var(--text);
-      border:1px solid #263042;
-    }
-    .search .icon{position:absolute; right:10px; top:50%; transform:translateY(-50%); opacity:.7}
-    table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:14px; border:1px solid var(--line)}
-    th,td{padding:10px 12px; border-bottom:1px solid var(--line); text-align:center; white-space:nowrap}
-    thead th{background:#0b1220; position:sticky; top:0; z-index:2}
-    tbody tr:nth-child(2n){background:#0b1526}
-    .k{opacity:.8}
-    .state{font-weight:800; padding:6px 10px; border-radius:8px; display:inline-block}
-    .okbg{background:rgba(22,163,74,.12); color:#86efac}
-    .badbg{background:rgba(185,28,28,.12); color:#fecaca}
-    .missbg{background:rgba(71,85,105,.25); color:#cbd5e1}
-    .note{color:#cbd5e1}
-    .footer{color:#9aa3b2; text-align:center; margin:24px 0 8px; font-size:13px}
-    .tag{font-weight:700;color:#67e8f9}
-    .ver{color:#9ca3af;font-size:12px;margin-top:6px}
+    .file-name{margin-inline-start:.75rem;opacity:.8}
+    .badges{display:flex;gap:.5rem;flex-wrap:wrap}
+    .chip{padding:.45rem .8rem;border-radius:999px;border:1px solid #334155;background:#0b1220;color:#e2e8f0}
+    .search input{width:100%;padding:.6rem .8rem;border-radius:.6rem;border:1px solid #334155;background:#0b1220;color:#e2e8f0}
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:.55rem .6rem;border-bottom:1px solid #1f2937;white-space:nowrap}
+    thead th{position:sticky;top:0;background:#0f172a;z-index:1}
+    /* تلوين نتيجتي غ/ر */
+    .status-match{background:#064e3b;color:#e7fee7}
+    .status-diff{background:#3f1d20;color:#ffe4e6}
+    .status-missing{background:#1f2937;color:#cbd5e1}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>HR — نظام المطابقة الشهرية (XLSX) <span class="tag">محلي (بدون إنترنت)</span></h1>
-    <div class="subtitle">كل المعالجة تتم داخل متصفحك. لا يتم رفع أي بيانات للخادم.</div>
+  <main class="container">
+    <header class="page-head">
+      <h1>📊 HR — نظام المطابقة الشهرية (XLSX)</h1>
+      <p class="muted">المعالجة تتم محليًا داخل المتصفح — لا يتم رفع أي بيانات للخادم.</p>
+    </header>
 
-    <div class="card">
-      <div class="row">
-        <div class="col">
-          <label class="h">📂 ملف البصمة (XLSX)</label>
-          <div class="hint">الأعمدة المطلوبة: <b>الكود | الاسم | غ | ر</b></div>
-          <input type="file" id="f-fp" accept=".xlsx,.xls" />
-          <div class="hint" id="fpMeta"></div>
-        </div>
-        <div class="col">
-          <label class="h">📂 الكشف اليدوي (XLSX)</label>
-          <div class="hint">الأعمدة المطلوبة: <b>الكود | الاسم | غ | ر</b></div>
-          <input type="file" id="f-manual" accept=".xlsx,.xls" />
-          <div class="hint" id="mnMeta"></div>
-        </div>
+    <!-- ملف البصمة أولا -->
+    <section class="card">
+      <h3>📁 ملف البصمة (XLSX)</h3>
+      <p class="hint">الأعمدة المطلوبة: <b>الكود | الاسم | غ | ر</b></p>
+      <div class="uploader">
+        <input class="hidden-file" type="file" id="fpFile" accept=".xlsx">
+        <label for="fpFile" class="btn">اختيار ملف…</label>
+        <span id="fpName" class="file-name">— لم يتم اختيار ملف بعد</span>
       </div>
+    </section>
 
-      <div class="actions">
-        <button id="btnExport" class="btn secondary" disabled>💾 تنزيل النتائج XLSX</button>
-        <button id="btnRun" class="btn primary" disabled>🚀 بدء المطابقة</button>
+    <!-- الكشف اليدوي ثانيا -->
+    <section class="card">
+      <h3>📁 الكشف اليدوي (XLSX)</h3>
+      <p class="hint">الأعمدة المطلوبة: <b>الكود | الاسم | غ | ر</b></p>
+      <div class="uploader">
+        <input class="hidden-file" type="file" id="manualFile" accept=".xlsx">
+        <label for="manualFile" class="btn">اختيار ملف…</label>
+        <span id="manualName" class="file-name">— لم يتم اختيار ملف بعد</span>
       </div>
+    </section>
 
-      <div class="chips">
-        <span class="chip" data-filter="all">الكل <b id="cAll">0</b></span>
-        <span class="chip ok" data-filter="ok">مطابق <b id="cOk">0</b></span>
-        <span class="chip bad" data-filter="bad">مخالف <b id="cBad">0</b></span>
-        <span class="chip miss" data-filter="miss">ناقص/غير مكتمل <b id="cMiss">0</b></span>
+    <!-- أكشن -->
+    <section class="card actions">
+      <button id="startCompare" class="btn primary" disabled>🚀 بدء المطابقة</button>
+      <button id="downloadXlsx" class="btn" disabled>💾 تنزيل النتائج XLSX</button>
+    </section>
+
+    <!-- عدادات + بحث -->
+    <section class="card stats">
+      <div class="badges">
+        <button class="chip" data-filter="all" id="statAll">الكل 0</button>
+        <button class="chip" data-filter="match" id="statMatch">مطابق 0</button>
+        <button class="chip" data-filter="diff" id="statDiff">مخالف 0</button>
+        <button class="chip" data-filter="missing" id="statMissing">ناقص/غير مكتمل 0</button>
       </div>
-
-      <div class="search">
-        <input id="q" placeholder="🔎 ابحث بالاسم أو الكود..." />
-        <span class="icon">🔍</span>
+      <div class="search" style="margin-top:.6rem">
+        <input id="searchBox" type="text" placeholder="🔎 ابحث بالاسم أو الكود…" />
       </div>
+    </section>
 
-      <div class="table card">
-        <table id="tbl">
+    <!-- التقرير -->
+    <section class="card">
+      <h3>التقرير</h3>
+      <div class="table-wrap">
+        <table id="resultTable">
           <thead>
-          <tr>
-            <th class="k">م</th>
-            <th>الكود (بصمة)</th>
-            <th>الاسم (بصمة)</th>
-            <th>غ (بصمة)</th>
-            <th>ر (بصمة)</th>
-            <th>الاسم (يدوي)</th>
-            <th>غ (يدوي)</th>
-            <th>ر (يدوي)</th>
-            <th>نتيجة غ</th>
-            <th>نتيجة ر</th>
-            <th>الملاحظة</th>
-          </tr>
+            <tr>
+              <th>م</th>
+              <th>الكود (بصمة)</th>
+              <th>الاسم (بصمة)</th>
+              <th>غ (بصمة)</th>
+              <th>ر (بصمة)</th>
+              <th>الكود (يدوي)</th>
+              <th>الاسم (يدوي)</th>
+              <th>غ (يدوي)</th>
+              <th>ر (يدوي)</th>
+              <th>نتيجة غ</th>
+              <th>نتيجة ر</th>
+              <th>الملاحظة</th>
+            </tr>
           </thead>
-          <tbody id="rows"></tbody>
+          <tbody id="resultBody"></tbody>
         </table>
       </div>
+    </section>
 
-      <div class="ver">الإصدار: v1.7 — تقريب عشري دقيق • ترتيب حسب الكود • قاعدة 31→30 • تطبيع مرن للأسماء • تصدير XLSX بدون تلوين.</div>
-    </div>
+    <footer class="page-foot" style="margin:.8rem 0 2rem">
+      <small>
+        نظام المطابقة الشهري الذكي للموارد البشرية - اليمن • إعداد المهندس/ حمدي العريقي ت: 7773143600 • جميع الحقوق محفوظة نوفمبر 2025م
+      </small>
+    </footer>
+  </main>
 
-    <div class="footer">نظام المطابقة الذكي للموارد البشرية — إعداد <b>المهندس/ حمدي العريفي</b> • اليمن • جميع الحقوق محفوظة © 2025</div>
-  </div>
-
-  <!-- مكتبة Excel محلية (نفس المجلد) -->
-  <script src="xlsx.full.min.js"></script>
-
-  <script>
-  /************* أدوات مساعدة *************/
-  const $ = (s) => document.querySelector(s);
-  const fmt = (v) => (v===null||v===undefined||v==="") ? "" : v;
-  const toNum = (x) => {
-    if (x===null || x===undefined || x==="") return 0;
-    const n = typeof x==='number' ? x : parseFloat(String(x).replace(/[^\d.-]/g,""));
-    return isNaN(n) ? 0 : n;
-  };
-  // تقريب دقيق لرقمين عشريين
-  const round2 = (n) => Math.round((toNum(n) + Number.EPSILON) * 100) / 100;
-
-  // تحويل 31 في (غ) اليدوي إلى 30
-  const cap30 = (g) => (round2(g) === 31 ? 30 : round2(g));
-
-  // تطبيع الكود كسلسلة (منع مشاكل الأصفار/الفواصل)
-  const normCode = (v) => {
-    if (v===null || v===undefined) return "";
-    let s = String(v).trim();
-    // إزالة أي كسور ناتجة عن الإكسل
-    if (/^\d+(\.\d+)?$/.test(s)) s = String(Math.trunc(Number(s)));
-    return s;
-  };
-
-  // تطبيع الاسم العربي (إزالة التشكيل، توحيد الألف/الياء/التاء المربوطة، إزالة الفراغات المكررة)
-  const normName = (name) => {
-    if (!name) return "";
-    let s = String(name).trim();
-    s = s.normalize('NFKC')
-         .replace(/[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]/g,'') // تشكيل
-         .replace(/[^\p{L}\p{N}\s]/gu,' ') // رموز
-         .replace(/[آإأ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه')
-         .replace(/\s+/g,' ').trim();
-    return s;
-  };
-
-  // تشابه أسماء بسيط: تقاطع كلمات بنسبة >= 0.6
-  const nameClose = (a,b) => {
-    a = normName(a); b = normName(b);
-    if (!a || !b) return false;
-    if (a === b) return true;
-    const ta = new Set(a.split(' '));
-    const tb = new Set(b.split(' '));
-    let inter = 0;
-    for (const w of ta) if (tb.has(w)) inter++;
-    const jaccard = inter / new Set([...ta,...tb]).size;
-    return jaccard >= 0.6;
-  };
-
-  // قراءة ورقة إكسل وتحويلها إلى كائنات
-  const readXlsx = async (file) => {
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, {type:'array'});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, {defval:"", raw:true});
-    return rows;
-  };
-
-  // استخراج أعمدة مع إعادة تسمية تلقائية إذا اختلف الترتيب
-  const pluck = (rows) => {
-    // محاولات مطابقة للأسماء الشائعة
-    const aliases = {
-      "الكود":["الكود","كود","code","id","الرقم"],
-      "الاسم":["الاسم","اسم","name"],
-      "غ":["غ","غياب","absent","a"],
-      "ر":["ر","اجازه","إجازة","اجازة","leave","r"]
-    };
-    const header = rows.length ? Object.keys(rows[0]) : [];
-    const map = {};
-    for (const key of Object.keys(aliases)){
-      const list = aliases[key];
-      const hit = header.find(h => list.includes(normName(h)));
-      map[key] = hit || key; // إن لم يوجد نبقيه كما هو
-    }
-    // تحويل
-    return rows.map(r => ({
-      "الكود": fmt(r[map["الكود"]]),
-      "الاسم": fmt(r[map["الاسم"]]),
-      "غ": fmt(r[map["غ"]]),
-      "ر": fmt(r[map["ر"]]),
-    }));
-  };
-
-  /************* الحالة العامة *************/
-  let fpRows = [], mnRows = [], allResults = [], currentFilter = 'all', query = '';
-
-  const refreshCounters = () => {
-    const cAll = allResults.length;
-    const cOk  = allResults.filter(x => x._state==='ok').length;
-    const cBad = allResults.filter(x => x._state==='bad').length;
-    const cMiss= allResults.filter(x => x._state==='miss').length;
-    $("#cAll").textContent = cAll;
-    $("#cOk").textContent = cOk;
-    $("#cBad").textContent = cBad;
-    $("#cMiss").textContent = cMiss;
-  };
-
-  const render = () => {
-    const tbody = $("#rows"); tbody.innerHTML = "";
-    const q = normName(query);
-    let list = allResults.slice();
-
-    if (currentFilter !== 'all'){
-      list = list.filter(x => x._state === currentFilter);
-    }
-    if (q){
-      list = list.filter(x =>
-        normCode(x["الكود"]) .includes(q) ||
-        normName(x["الاسم (بصمة)"]).includes(q) ||
-        normName(x["الاسم (يدوي)"]).includes(q)
-      );
-    }
-    // ترتيب بالكود تصاعديًا
-    list.sort((a,b)=> normCode(a["الكود"]).localeCompare(normCode(b["الكود"]), 'ar'));
-
-    list.forEach((r,i)=>{
-      const tr = document.createElement('tr');
-      const stG = r["نتيجة غ"]==="مطابق" ? 'okbg' : (r["نتيجة غ"]==="ناقص" ? 'missbg' : 'badbg');
-      const stR = r["نتيجة ر"]==="مطابق" ? 'okbg' : (r["نتيجة ر"]==="ناقص" ? 'missbg' : 'badbg');
-
-      tr.innerHTML = `
-        <td class="k">${i+1}</td>
-        <td>${fmt(r["الكود"])}</td>
-        <td style="text-align:right">${fmt(r["الاسم (بصمة)"])}</td>
-        <td>${fmt(r["غ (بصمة)"])}</td>
-        <td>${fmt(r["ر (بصمة)"])}</td>
-        <td style="text-align:right">${fmt(r["الاسم (يدوي)"])}</td>
-        <td>${fmt(r["غ (يدوي)"])}</td>
-        <td>${fmt(r["ر (يدوي)"])}</td>
-        <td><span class="state ${stG}">${fmt(r["نتيجة غ"])}</span></td>
-        <td><span class="state ${stR}">${fmt(r["نتيجة ر"])}</span></td>
-        <td class="note">${fmt(r["الملاحظة"])}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  };
-
-  $("#q").addEventListener('input', e => { query = e.target.value; render(); });
-  document.querySelectorAll('.chip').forEach(ch=>{
-    ch.addEventListener('click', ()=>{
-      document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
-      ch.classList.add('active');
-      currentFilter = ch.getAttribute('data-filter');
-      render();
-    });
-  });
-
-  const enableRun = () => {
-    const ok = fpRows.length>0 && mnRows.length>0;
-    $("#btnRun").disabled = !ok;
-  };
-
-  /************* تحميل الملفات *************/
-  $("#f-fp").addEventListener('change', async (e)=>{
-    const f = e.target.files[0];
-    if (!f) return;
-    $("#fpMeta").textContent = `تم اختيار: ${f.name}`;
-    const rows = await readXlsx(f);
-    fpRows = pluck(rows);
-    enableRun();
-  });
-
-  $("#f-manual").addEventListener('change', async (e)=>{
-    const f = e.target.files[0];
-    if (!f) return;
-    $("#mnMeta").textContent = `تم اختيار: ${f.name}`;
-    const rows = await readXlsx(f);
-    mnRows = pluck(rows);
-    enableRun();
-  });
-
-  /************* المطابقة *************/
-  $("#btnRun").addEventListener('click', ()=>{
-    if (!fpRows.length || !mnRows.length){
-      alert("رجاءً اختر ملفيّ البصمة واليدوي (XLSX) أولًا.");
-      return;
-    }
-
-    const manualByCode = new Map();
-    mnRows.forEach(r=>{
-      const code = normCode(r["الكود"]);
-      if (!manualByCode.has(code)) manualByCode.set(code, []);
-      manualByCode.get(code).push(r);
-    });
-
-    const results = [];
-    fpRows.forEach(row=>{
-      const code = normCode(row["الكود"]);
-      const nameF = fmt(row["الاسم"]);
-      const gF = round2(row["غ"]);
-      const rF = round2(row["ر"]);
-
-      const cands = manualByCode.get(code) || [];
-      // ابحث عن أفضل مرشح بناءً على الاسم
-      let best = null, note = "";
-      if (cands.length){
-        // مطابقة دقيقة أولًا
-        best = cands.find(m => normName(m["الاسم"]) === normName(nameF));
-        if (!best){
-          // تطبيع مرن
-          best = cands.find(m => nameClose(m["الاسم"], nameF));
-          if (best) note = "تطبيع مرن: اختلاف اسم";
-        }
-        if (!best){
-          // إن لم نجد اسمًا مقاربًا نأخذ أول سطر لنُظهر أنه موجود تحت نفس الكود
-          best = cands[0];
-          note = "تنبيه: نفس الكود مع اسم مختلف";
-        }
-      }
-
-      if (!best){
-        // لا يوجد هذا الكود في اليدوي → ناقص
-        results.push({
-          "الكود": code,
-          "الاسم (بصمة)": nameF,
-          "غ (بصمة)": gF,
-          "ر (بصمة)": rF,
-          "الاسم (يدوي)": "",
-          "غ (يدوي)": "",
-          "ر (يدوي)": "",
-          "نتيجة غ": "ناقص",
-          "نتيجة ر": "ناقص",
-          "الملاحظة": "بيانات ناقصة أو غير موجودة في الكشف اليدوي",
-          _state: "miss"
-        });
-        return;
-      }
-
-      // قيم اليدوي (مع قاعدة 31 -> 30 في غ)
-      const gM = cap30(best["غ"]);
-      const rM = round2(best["ر"]);
-
-      // مقارنة
-      let resG = "مطابق", resR = "مطابق";
-      let extra = "";
-
-      if (gF !== gM){
-        resG = "مخالف";
-        extra = (gF > gM) ? "يتم التأكد من صحة الإدخال اليدوي غ"
-                          : `بعد التأكد يُستوفى غ بالفارق ${(gM - gF).toFixed(1)}`;
-      }
-      if (rF !== rM){
-        resR = "مخالف";
-        if (!extra) extra = (rF > rM) ? "يتم التأكد من صحة الإدخال اليدوي ر"
-                                      : `بعد التأكد يُسجَّل ر بالفارق ${(rM - rF).toFixed(1)}`;
-      }
-
-      // عمود الملاحظة: لا نكتب "مطابق". نكتب فقط التطبيع المرن/المخالف/الناقص.
-      let finalNote = "";
-      if (note) finalNote = note;            // تطبيع مرن
-      if (extra) finalNote = finalNote ? (finalNote + " • " + extra) : extra;
-
-      const state = (resG==="مطابق" && resR==="مطابق") ? "ok"
-                    : (resG==="ناقص" || resR==="ناقص") ? "miss" : "bad";
-
-      results.push({
-        "الكود": code,
-        "الاسم (بصمة)": nameF,
-        "غ (بصمة)": gF,
-        "ر (بصمة)": rF,
-        "الاسم (يدوي)": fmt(best["الاسم"]),
-        "غ (يدوي)": gM,
-        "ر (يدوي)": rM,
-        "نتيجة غ": resG,
-        "نتيجة ر": resR,
-        "الملاحظة": finalNote,
-        _state: state
-      });
-    });
-
-    allResults = results;
-    refreshCounters();
-    $("#btnExport").disabled = allResults.length===0;
-    // اضبط الفلتر على "الكل" عند كل تشغيل
-    currentFilter = 'all';
-    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
-    document.querySelector('.chip[data-filter="all"]').classList.add('active');
-    render();
-  });
-
-  /************* تصدير XLSX *************/
-  $("#btnExport").addEventListener('click', ()=>{
-    if (!allResults.length) return;
-    // ترتيب قبل التصدير
-    const out = allResults.slice().sort((a,b)=> normCode(a["الكود"]).localeCompare(normCode(b["الكود"]),'ar'))
-      .map((r,idx)=>({
-        "م": idx+1,
-        "الكود (بصمة)": r["الكود"],
-        "الاسم (بصمة)": r["الاسم (بصمة)"],
-        "غ (بصمة)": r["غ (بصمة)"],
-        "ر (بصمة)": r["ر (بصمة)"],
-        "الاسم (يدوي)": r["الاسم (يدوي)"],
-        "غ (يدوي)": r["غ (يدوي)"],
-        "ر (يدوي)": r["ر (يدوي)"],
-        "نتيجة غ": r["نتيجة غ"],
-        "نتيجة ر": r["نتيجة ر"],
-        "الملاحظة": r["الملاحظة"] || ""
-      }));
-
-    const ws = XLSX.utils.json_to_sheet(out);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "canary_monthly_result");
-    XLSX.writeFile(wb, "canary_monthly_result.xlsx");
-  });
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
