@@ -3,70 +3,64 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>نظام المطابقة الشهرية — HR (XLSX)</title>
-
-  <!-- تنسيقاتك الحالية -->
-  <link rel="stylesheet" href="./style.css" />
-
-  <!-- SheetJS لقراءة/كتابة XLSX -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
+  <title>HR — نظام المطابقة الشهرية (XLSX)</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <header class="container">
-    <h1>🧮 HR — نظام المطابقة الشهرية (XLSX)</h1>
-    <p class="muted">المعالجة تتم محليًا داخل المتصفح — لا يتم رفع أي بيانات للخادم.</p>
-  </header>
-
   <main class="container">
+    <header class="page-head">
+      <h1>📊 HR — نظام المطابقة الشهرية (XLSX)</h1>
+      <p class="muted">المعالجة تتم محليًا داخل المتصفح — لا يتم رفع أي بيانات للخادم.</p>
+    </header>
 
-    <!-- بطاقتا رفع الملفات -->
-    <section class="grid-2">
-      <!-- الكشف اليدوي -->
-      <div class="card">
-        <h2>📂 الكشف اليدوي <span class="muted">(XLSX)</span></h2>
-        <p class="muted">الأعمدة المطلوبة: <strong>الكود</strong> | <strong>الاسم</strong> | <strong>غ</strong> | <strong>ر</strong></p>
-        <label class="file-btn">
-          اختيار ملف…
-          <input id="manualFile" type="file" accept=".xlsx" />
-        </label>
-      </div>
-
-      <!-- ملف البصمة -->
-      <div class="card">
-        <h2>📂 ملف البصمة <span class="muted">(XLSX)</span></h2>
-        <p class="muted">الأعمدة المطلوبة: <strong>الكود</strong> | <strong>الاسم</strong> | <strong>غ</strong> | <strong>ر</strong></p>
-        <label class="file-btn">
-          اختيار ملف…
-          <input id="fpFile" type="file" accept=".xlsx" />
-        </label>
+    <!-- ملف البصمة -->
+    <section class="card">
+      <h3>📁 ملف البصمة (XLSX)</h3>
+      <p class="hint">الأعمدة المطلوبة: <b>الكود | الاسم | غ | ر</b></p>
+      <div class="uploader">
+        <input type="file" id="fpFile" accept=".xlsx" />
+        <label for="fpFile" class="btn">اختيار ملف…</label>
+        <span id="fpName" class="file-name">— لم يتم اختيار ملف بعد</span>
       </div>
     </section>
 
-    <!-- أزرار التنفيذ والتصدير -->
-    <section class="actions">
-      <button id="startBtn" class="primary">🚀 بدء المطابقة</button>
-      <button id="downloadBtn" class="success">💾 تنزيل النتائج XLSX</button>
+    <!-- الكشف اليدوي -->
+    <section class="card">
+      <h3>📁 الكشف اليدوي (XLSX)</h3>
+      <p class="hint">الأعمدة المطلوبة: <b>الكود | الاسم | غ | ر</b></p>
+      <div class="uploader">
+        <input type="file" id="manualFile" accept=".xlsx" />
+        <label for="manualFile" class="btn">اختيار ملف…</label>
+        <span id="manualName" class="file-name">— لم يتم اختيار ملف بعد</span>
+      </div>
     </section>
 
-    <!-- الشرائح الإحصائية + الفلاتر -->
-    <section class="chips card">
-      <button id="filter-all"    class="chip">الكل <span id="stat-total">0</span></button>
-      <button id="filter-ok"     class="chip green">مطابق <span id="stat-match">0</span></button>
-      <button id="filter-bad"    class="chip red">مخالف <span id="stat-mismatch">0</span></button>
-      <button id="filter-miss"   class="chip gray">ناقص/غير مكتمل <span id="stat-missing">0</span></button>
+    <!-- أزرار التحكم -->
+    <section class="card actions">
+      <button id="startCompare" class="btn primary" disabled>🚀 بدء المطابقة</button>
+      <button id="downloadXlsx" class="btn" disabled>💾 تنزيل النتائج XLSX</button>
     </section>
 
-    <!-- شريط البحث -->
-    <section class="card" style="margin-top: 12px;">
-      <label for="search" class="muted">🔎 بحث بالاسم أو الكود… مثال: 1145 أو عثمان</label>
-      <input id="search" type="text" placeholder="ابحث بالاسم أو الكود…" dir="rtl" />
+    <!-- عدادات وفلترة -->
+    <section class="card stats">
+      <div class="badges">
+        <button class="chip" data-filter="all" id="statAll">الكل 0</button>
+        <button class="chip" data-filter="match" id="statMatch">مطابق 0</button>
+        <button class="chip" data-filter="diff" id="statDiff">مخالف 0</button>
+        <button class="chip" data-filter="missing" id="statMissing">ناقص/غير مكتمل 0</button>
+      </div>
+      <div class="search">
+        <input id="searchBox" type="text" placeholder="🔎 ابحث بالاسم أو الكود…" />
+      </div>
     </section>
 
-    <!-- جدول التقرير -->
-    <section class="card table-wrap">
-      <h2>التقرير</h2>
-      <div class="table-scroll">
-        <table class="table">
+    <!-- التقرير -->
+    <section class="card">
+      <h3>التقرير</h3>
+      <div class="table-wrap">
+        <table id="resultTable">
           <thead>
             <tr>
               <th>م</th>
@@ -83,17 +77,18 @@
               <th>الملاحظة</th>
             </tr>
           </thead>
-          <tbody id="result-body"></tbody>
+          <tbody id="resultBody"></tbody>
         </table>
       </div>
     </section>
 
-    <footer class="muted center" style="margin: 24px 0;">
-      نظام المطابقة الشهري الذكي للموارد البشرية — اليمن • إعداد: المهندس/ حمدي العريقي • ت: 7773143600 • جميع الحقوق محفوظة نوڤمبر 2025م
+    <footer class="page-foot">
+      <small>
+        نظام المطابقة الشهري الذكي للموارد البشرية - اليمن • إعداد المهندس/ حمدي العريقي ت: 7773143600 • جميع الحقوق محفوظة نوفمبر 2025م
+      </small>
     </footer>
   </main>
 
-  <!-- منطق التطبيق -->
-  <script src="./script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
